@@ -1,36 +1,36 @@
 {
-  "schemaVersion": 1,
-  "id": "minecraft2shell",
-  "version": "${version}",
-  "name": "Minecraft2Shell",
-  "description": "Oyun ici chat komutlari ile Windows komutlari calistir",
-  "authors": [
-    "yigitgulyurt"
-  ],
-  "contact": {
-    "sources": "https://github.com/yigitgulyurt/minecraft2shell"
-  },
-  "license": "MIT",
-  "icon": "assets/minecraft2shell/icon.png",
-  "environment": "*",
-  "entrypoints": {
-    "main": [
-      "tr.net.yigitgulyurt.minecraft2shell.Minecraft2Shell"
+    "schemaVersion": 1,
+    "id": "minecraft2shell",
+    "version": "${version}",
+    "name": "Minecraft2Shell",
+    "description": "Singleplayer'da oyun içi komutlarla kendi bilgisayarınızda kabuk komutları çalıştırın!",
+    "authors": [
+        "yigitgulyurt"
     ],
-    "client": [
-      "tr.net.yigitgulyurt.minecraft2shell.Minecraft2ShellClient"
-    ],
-    "modmenu": [
-      "tr.net.yigitgulyurt.minecraft2shell.Minecraft2ShellClient"
-    ]
-  },
-  "mixins": [],
-  "depends": {
-    "fabricloader": ">=0.18.5",
-    "minecraft": "~26.1.2",
-    "java": ">=25",
-    "fabric-api": "*",
-    "yet_another_config_lib_v3": ">=3.9.2",
-    "modmenu": "*"
-  }
+    "contact": {
+        "sources": "https://github.com/yigitgulyurt/minecraft2shell"
+    },
+    "license": "MIT",
+    "icon": "assets/minecraft2shell/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "tr.net.yigitgulyurt.minecraft2shell.Minecraft2Shell"
+        ],
+        "client": [
+            "tr.net.yigitgulyurt.minecraft2shell.Minecraft2ShellClient"
+        ],
+        "modmenu": [
+            "tr.net.yigitgulyurt.minecraft2shell.Minecraft2ShellClient"
+        ]
+    },
+    "mixins": [],
+    "depends": {
+        "fabricloader": ">=0.18.5",
+        "minecraft": "~26.1.2",
+        "java": ">=25",
+        "fabric-api": "*",
+        "yet_another_config_lib_v3": ">=3.9.2",
+        "modmenu": "*"
+    }
 }
