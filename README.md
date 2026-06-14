@@ -18,22 +18,22 @@ Minecraft içinde doğrudan sistem komutları çalıştırmanızı sağlayan Fab
 
 ## Komutlar
 
-Tüm komutlar `/shell` ile başlar:
+Tüm komutlar `/m2s` ile başlar:
 
 | Komut | Açıklama |
 |--------|----------|
-| `/shell history` | Komut geçmişini göster |
-| `/shell history clear` | Komut geçmişini temizle |
-| `/shell history <numara>` | Geçmişten belirli bir komutu tekrar çalıştır |
-| `/shell alias list` | Mevcut aliasları listele |
-| `/shell alias add <isim> <komut>` | Yeni bir alias oluştur |
-| `/shell alias remove <isim>` | Bir aliası sil |
-| `/shell alias run <isim>` | Aliası hemen çalıştır (yeniden başlatmaya gerek yok) |
-| `/shell blacklist list` | Kara listedeki komutları listele |
-| `/shell blacklist add <komut>` | Bir komutu kara listeye ekle |
-| `/shell blacklist remove <komut>` | Bir komutu kara listeden çıkar |
-| `/shell config` | Konfigürasyon ekranını aç |
-| `/shell <komut>` | Sistem komutu çalıştır |
+| `/m2s history` | Komut geçmişini göster |
+| `/m2s history clear` | Komut geçmişini temizle |
+| `/m2s history <numara>` | Geçmişten belirli bir komutu tekrar çalıştır |
+| `/m2s alias list` | Mevcut aliasları listele |
+| `/m2s alias add <isim> <komut>` | Yeni bir alias oluştur |
+| `/m2s alias remove <isim>` | Bir aliası sil |
+| `/m2s alias run <isim>` | Aliası hemen çalıştır (yeniden başlatmaya gerek yok) |
+| `/m2s blacklist list` | Kara listedeki komutları listele |
+| `/m2s blacklist add <komut>` | Bir komutu kara listeye ekle |
+| `/m2s blacklist remove <komut>` | Bir komutu kara listeden çıkar |
+| `/m2s config` | Konfigürasyon ekranını aç |
+| `/m2s <komut>` | Sistem komutu çalıştır |
 
 Bağımsız aliasları doğrudan `/<aliasadı>` olarak da kullanabilirsiniz!
 
@@ -99,22 +99,22 @@ Fabric mod that lets you run system commands directly from within Minecraft!
 
 ## Commands
 
-All commands start with `/shell`:
+All commands start with `/m2s`:
 
 | Command | Description |
 |---------|-------------|
-| `/shell history` | Show command history |
-| `/shell history clear` | Clear command history |
-| `/shell history <number>` | Re-run a specific command from history |
-| `/shell alias list` | List existing aliases |
-| `/shell alias add <name> <command>` | Create a new alias |
-| `/shell alias remove <name>` | Remove an alias |
-| `/shell alias run <name>` | Run an alias immediately (no restart required) |
-| `/shell blacklist list` | List blacklisted commands |
-| `/shell blacklist add <command>` | Add a command to the blacklist |
-| `/shell blacklist remove <command>` | Remove a command from the blacklist |
-| `/shell config` | Open configuration screen |
-| `/shell <command>` | Run a system command |
+| `/m2s history` | Show command history |
+| `/m2s history clear` | Clear command history |
+| `/m2s history <number>` | Re-run a specific command from history |
+| `/m2s alias list` | List existing aliases |
+| `/m2s alias add <name> <command>` | Create a new alias |
+| `/m2s alias remove <name>` | Remove an alias |
+| `/m2s alias run <name>` | Run an alias immediately (no restart required) |
+| `/m2s blacklist list` | List blacklisted commands |
+| `/m2s blacklist add <command>` | Add a command to the blacklist |
+| `/m2s blacklist remove <command>` | Remove a command from the blacklist |
+| `/m2s config` | Open configuration screen |
+| `/m2s <command>` | Run a system command |
 
 You can also use standalone aliases directly as `/<aliasname>`!
 

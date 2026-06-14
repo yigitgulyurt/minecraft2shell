@@ -21,8 +21,8 @@ public class ShellCommand {
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
 
-        // /shell <komut> - ONLY CLIENT-SIDE
-        dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("shell")
+        // /m2s <komut> - ONLY CLIENT-SIDE
+        LiteralArgumentBuilder<FabricClientCommandSource> m2sCommand = LiteralArgumentBuilder.<FabricClientCommandSource>literal("m2s")
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("history")
                         .executes(ctx -> showHistory(ctx.getSource()))
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("clear")
@@ -73,8 +73,10 @@ public class ShellCommand {
                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("cmd", StringArgumentType.greedyString())
                         .executes(ctx -> runCommand(
                                 ctx.getSource(),
-                                StringArgumentType.getString(ctx, "cmd"))))
-        );
+                                StringArgumentType.getString(ctx, "cmd"))));
+
+        // Register /m2s command
+        dispatcher.register(m2sCommand);
     }
 
     // --- Alias komutlarini kaydet (/aliasadi seklinde) ---
