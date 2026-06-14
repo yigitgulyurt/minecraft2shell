@@ -78,13 +78,7 @@ public class ModConfigScreen {
                         .controller(TickBoxControllerBuilder::create)
                         .build())
 
-                .option(Option.<Boolean>createBuilder()
-                        .name(Component.literal(LanguageManager.get("config.use_regex_blacklist")))
-                        .description(OptionDescription.of(
-                                Component.literal(LanguageManager.get("config.use_regex_blacklist.desc"))))
-                        .binding(false, () -> cfg.useRegexInBlacklist, v -> cfg.useRegexInBlacklist = v)
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
+
 
                 .build());
 

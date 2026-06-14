@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class ConfigManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -25,7 +26,7 @@ public class ConfigManager {
     private static final Path OUTPUT_DIR = BASE_DIR.resolve("outputs");
     
     private static ModConfig config = new ModConfig();
-    private static List<String> blacklist = new ArrayList<>();
+    private static List<BlacklistEntry> blacklist = new ArrayList<>();
     private static Map<String, String> aliases = new LinkedHashMap<>();
     private static List<HistoryEntry> history = new ArrayList<>();
     private static Map<String, Theme> themes = new LinkedHashMap<>();
@@ -38,6 +39,17 @@ public class ConfigManager {
         public HistoryEntry(String command, String timestamp) {
             this.command = command;
             this.timestamp = timestamp;
+        }
+    }
+    
+    public static class BlacklistEntry {
+        public String type; // "wildcard", "specific", "regex"
+        public String pattern;
+        
+        public BlacklistEntry() {}
+        public BlacklistEntry(String type, String pattern) {
+            this.type = type;
+            this.pattern = pattern;
         }
     }
     
@@ -96,7 +108,7 @@ public class ConfigManager {
     
     public static void loadAll() {
         config = loadJson(CONFIG_FILE, ModConfig.class, new ModConfig());
-        blacklist = loadJsonList(BLACKLIST_FILE, String.class, new ArrayList<>());
+        blacklist = loadJsonList(BLACKLIST_FILE, BlacklistEntry.class, new ArrayList<>());
         aliases = loadJsonMap(ALIASES_FILE, String.class, String.class, new LinkedHashMap<>());
         history = loadJsonList(HISTORY_FILE, HistoryEntry.class, new ArrayList<>());
         themes = loadJsonMap(THEMES_FILE, String.class, Theme.class, new LinkedHashMap<>());
@@ -114,10 +126,50 @@ public class ConfigManager {
     
     public static ModConfig getConfig() { return config; }
     
-    public static List<String> getBlacklist() { return blacklist; }
-    public static void setBlacklist(List<String> list) {
-        blacklist = list;
+    public static List<BlacklistEntry> getBlacklist() { return blacklist; }
+    public static void addToBlacklist(String type, String pattern) {
+        blacklist.add(new BlacklistEntry(type, pattern));
         saveJson(BLACKLIST_FILE, blacklist);
+    }
+    public static boolean removeFromBlacklist(String pattern) {
+        boolean removed = blacklist.removeIf(e -> e.pattern.equals(pattern));
+        saveJson(BLACKLIST_FILE, blacklist);
+        return removed;
+    }
+    
+    public static boolean isBlacklisted(String command) {
+        for (BlacklistEntry entry : blacklist) {
+            if (matches(entry, command)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private static boolean matches(BlacklistEntry entry, String command) {
+        switch (entry.type) {
+            case "specific":
+                return command.equalsIgnoreCase(entry.pattern);
+            case "wildcard":
+                return wildcardMatch(command, entry.pattern);
+            case "regex":
+                try {
+                    Pattern pattern = Pattern.compile(entry.pattern, Pattern.CASE_INSENSITIVE);
+                    return pattern.matcher(command).find();
+                } catch (Exception e) {
+                    return false;
+                }
+            default:
+                return false;
+        }
+    }
+
+    private static boolean wildcardMatch(String text, String pattern) {
+        String regex = pattern
+                .replace(".", "\\.")
+                .replace("?", ".")
+                .replace("*", ".*");
+        return Pattern.compile("^" + regex + "$", Pattern.CASE_INSENSITIVE).matcher(text).find();
     }
     
     public static Map<String, String> getAliases() { return aliases; }
@@ -141,7 +193,6 @@ public class ConfigManager {
     }
     public static void addHistory(String command, String timestamp) {
         history.add(new HistoryEntry(command, timestamp));
-        // History limit kontrolü
         if (history.size() > config.historyLimit) {
             history.remove(0);
         }
@@ -215,40 +266,5 @@ public class ConfigManager {
         } catch (IOException e) {
             System.err.println("[minecraft2shell] Dosya kaydedilemedi " + path + ": " + e.getMessage());
         }
-    }
-    
-    // --- Export/Import ---
-    
-    public static void exportConfig(Path exportPath) {
-        Map<String, Object> export = new LinkedHashMap<>();
-        export.put("config", config);
-        export.put("blacklist", blacklist);
-        export.put("aliases", aliases);
-        export.put("themes", themes);
-        
-        saveJson(exportPath, export);
-    }
-    
-    @SuppressWarnings("unchecked")
-    public static void importConfig(Path importPath) {
-        Map<String, Object> imported = loadJson(importPath, Map.class, new LinkedHashMap<>());
-        
-        if (imported.containsKey("config")) {
-            config = GSON.fromJson(GSON.toJsonTree(imported.get("config")), ModConfig.class);
-        }
-        if (imported.containsKey("blacklist")) {
-            blacklist = GSON.fromJson(GSON.toJsonTree(imported.get("blacklist")), 
-                new com.google.gson.reflect.TypeToken<List<String>>(){}.getType());
-        }
-        if (imported.containsKey("aliases")) {
-            aliases = GSON.fromJson(GSON.toJsonTree(imported.get("aliases")), 
-                new com.google.gson.reflect.TypeToken<Map<String, String>>(){}.getType());
-        }
-        if (imported.containsKey("themes")) {
-            themes = GSON.fromJson(GSON.toJsonTree(imported.get("themes")), 
-                new com.google.gson.reflect.TypeToken<Map<String, Theme>>(){}.getType());
-        }
-        
-        saveAll();
     }
 }

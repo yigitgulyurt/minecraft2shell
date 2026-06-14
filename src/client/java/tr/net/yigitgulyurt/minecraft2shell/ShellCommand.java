@@ -7,6 +7,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.network.chat.Component;
+import tr.net.yigitgulyurt.minecraft2shell.command.BlacklistTypeArgument;
 import tr.net.yigitgulyurt.minecraft2shell.config.ConfigManager;
 import tr.net.yigitgulyurt.minecraft2shell.config.ModConfig;
 import tr.net.yigitgulyurt.minecraft2shell.data.HistoryManager;
@@ -59,11 +60,12 @@ public class ShellCommand {
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("list")
                                 .executes(ctx -> listBlacklist(ctx.getSource())))
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("add")
-                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("entry", StringArgumentType.greedyString())
-                                        .executes(ctx -> addBlacklist(ctx.getSource(), StringArgumentType.getString(ctx, "entry")))))
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("type", BlacklistTypeArgument.blacklistType())
+                                        .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("pattern", StringArgumentType.greedyString())
+                                                .executes(ctx -> addBlacklist(ctx.getSource(), BlacklistTypeArgument.getBlacklistType(ctx, "type"), StringArgumentType.getString(ctx, "pattern"))))))
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("remove")
-                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("entry", StringArgumentType.greedyString())
-                                        .executes(ctx -> removeBlacklist(ctx.getSource(), StringArgumentType.getString(ctx, "entry"))))))
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("pattern", StringArgumentType.greedyString())
+                                        .executes(ctx -> removeBlacklist(ctx.getSource(), StringArgumentType.getString(ctx, "pattern"))))))
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("config")
                         .executes(ctx -> openConfig(ctx.getSource())))
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("save")
@@ -105,7 +107,7 @@ public class ShellCommand {
     private static int saveCommandOutput(FabricClientCommandSource source, String filename, String cmd) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
 
-        if (ConfigManager.getConfig().isBlacklisted(cmd)) {
+        if (ConfigManager.isBlacklisted(cmd)) {
             source.sendError(Component.literal(theme.error + LanguageManager.get("command.blacklist.error") + cmd));
             return 0;
         }
@@ -193,7 +195,7 @@ public class ShellCommand {
     private static int runCommandInternal(FabricClientCommandSource source, String cmd, String savePath) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
 
-        if (ConfigManager.getConfig().isBlacklisted(cmd)) {
+        if (ConfigManager.isBlacklisted(cmd)) {
             source.sendError(Component.literal(theme.error + LanguageManager.get("command.blacklist.error") + cmd));
             return 0;
         }
@@ -305,7 +307,6 @@ public class ShellCommand {
         }
         String cmd = pendingCommand;
         pendingCommand = null;
-        // Confirm sonrası direkt çalıştır - tekrar confirm sormasın
         ModConfig cfg = ConfigManager.getConfig();
         boolean oldConfirm = cfg.confirmCommand;
         cfg.confirmCommand = false;
@@ -432,35 +433,38 @@ public class ShellCommand {
 
     private static int listBlacklist(FabricClientCommandSource source) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
-        List<String> bl = ConfigManager.getBlacklist();
+        List<ConfigManager.BlacklistEntry> bl = ConfigManager.getBlacklist();
         if (bl.isEmpty()) {
             source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.blacklist.empty")));
             return 1;
         }
         source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.blacklist.title")));
-        bl.forEach(entry ->
-                source.sendFeedback(Component.literal(theme.output + " - " + entry)));
+        for (ConfigManager.BlacklistEntry entry : bl) {
+            String typeLabel = entry.type.equals("specific") ? "Specific" : entry.type.equals("wildcard") ? "Wildcard" : "Regex";
+            source.sendFeedback(Component.literal(theme.output + " - [" + typeLabel + "] " + entry.pattern));
+        }
         return 1;
     }
 
-    private static int addBlacklist(FabricClientCommandSource source, String entry) {
+    private static int addBlacklist(FabricClientCommandSource source, String type, String pattern) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
-        List<String> bl = ConfigManager.getBlacklist();
-        bl.add(entry.trim().toLowerCase());
-        ConfigManager.setBlacklist(bl);
-        source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + LanguageManager.get("command.blacklist.added") + entry));
+        String lowerType = type.toLowerCase();
+        if (!lowerType.equals("specific") && !lowerType.equals("wildcard") && !lowerType.equals("regex")) {
+            source.sendError(Component.literal(theme.error + "Invalid type! Use: specific, wildcard, or regex"));
+            return 0;
+        }
+        ConfigManager.addToBlacklist(lowerType, pattern);
+        source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + LanguageManager.get("command.blacklist.added") + " [" + lowerType + "] " + pattern));
         return 1;
     }
 
-    private static int removeBlacklist(FabricClientCommandSource source, String entry) {
+    private static int removeBlacklist(FabricClientCommandSource source, String pattern) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
-        List<String> bl = ConfigManager.getBlacklist();
-        boolean removed = bl.remove(entry.trim().toLowerCase());
+        boolean removed = ConfigManager.removeFromBlacklist(pattern);
         if (removed) {
-            ConfigManager.setBlacklist(bl);
-            source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + LanguageManager.get("command.blacklist.removed") + entry));
+            source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + LanguageManager.get("command.blacklist.removed") + pattern));
         } else {
-            source.sendError(Component.literal(theme.error + LanguageManager.get("command.blacklist.not_found") + entry));
+            source.sendError(Component.literal(theme.error + LanguageManager.get("command.blacklist.not_found") + pattern));
         }
         return 1;
     }
