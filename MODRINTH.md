@@ -34,81 +34,6 @@ Please be careful!
 
 ---
 
-## 📢 Genel Bakış (Türkçe)
-
-Minecraft2Shell, Minecraft içinde doğrudan işletim sistemi komutları çalıştırmanızı sağlayan güçlü bir client-side Fabric modudur!
-
-## ✨ Ana Özellikler
-
-| Özellik | Açıklama |
-|---------|----------|
-| 🖥️ **Tam Çoklu Platform Desteği** | Windows, Linux ve MacOS'u destekler, istediğiniz kabuk (shell) ile çalışır! |
-| ⚡ **Tamamen Client-Side** | Hiçbir sunucu moduna ihtiyaç duymaz |
-| 📜 **Komut Geçmişi** | Önceden çalıştırdığınız komutları kaydeder ve tekrar kullanmanızı sağlar |
-| 🏷️ **Alias Sistemi** | Sık kullandığınız komutlar için özel kısayollar oluşturun |
-| 🚫 **Kara Liste** | İstenmeyen veya tehlikeli komutları engelleyin |
-| ⚙️ **Gelişmiş Ayarlar** | ModMenu ve YACL ile entegreli konfigürasyon arayüzü |
-| 🌍 **Çoklu Dil Desteği** | Türkçe ve İngilizce seçenekleri |
-
-## 📝 Komutlar
-
-Tüm komutlar `/m2s` ile başlar:
-
-- `/m2s history` - Komut geçmişini listeler
-- `/m2s history clear` - Komut geçmişini temizler
-- `/m2s history <num>` - Belirli bir geçmiş komutunu tekrar çalıştırır
-- `/m2s alias list` - Mevcut aliasları listeler
-- `/m2s alias add <isim> <komut>` - Yeni bir alias ekler
-- `/m2s alias remove <isim>` - Bir aliası siler
-- `/m2s alias run <isim>` - Aliası hemen çalıştırır (yeniden başlatmaya gerek yok)
-- `/m2s blacklist list` - Kara listedeki komutları gösterir
-- `/m2s blacklist add <komut>` - Bir komutu kara listeye ekler
-- `/m2s blacklist remove <komut>` - Bir komutu kara listeden çıkarır
-- `/m2s config` - Ayarları açar
-- `/m2s <komut>` - Herhangi bir sistem komutunu çalıştırır
-
-💡 **İpucu**: Oluşturduğunuz aliasları doğrudan `/<aliasadı>` olarak çalıştırabilirsiniz!
-
-## 🛠️ Kurulum
-
-1. Minecraft 26.1.2 veya uyumlu bir sürümünü kullanın
-2. Fabric Loader'ı kurun
-3. Gerekli bağımlılıkları yükleyin:
-   - [Fabric API](https://modrinth.com/mod/fabric-api)
-   - [Mod Menu](https://modrinth.com/mod/modmenu)
-   - [YetAnotherConfigLib](https://modrinth.com/mod/yacl)
-4. `minecraft2shell-x.x.x.jar` dosyasını indirin ve Minecraft dizininizdeki `mods` klasörüne atın
-5. Oyunu başlatın!
-
-## ⚠️ Güvenlik Uyarısı
-
-**BU MOD SON DERECE GÜÇLÜDÜR VE DİKKATSİZ KULLANILMASI HALİNDE ZARAR VEREBİLİR!**
-
-⚠️ **Ne yapacağınızdan %100 emin olmadığınız komutları ÇALIŞTIRMAYIN!**
-⚠️ **Önemli dosyalarınızı yedekleyin!**
-⚠️ **Başkalarının bu modu kullanmasına ASLA izin vermeyin!**
-
-Kötü amaçlı komutlar şunlara neden olabilir:
-- Tüm dosyalarınızın kalıcı olarak silinmesi
-- Sistem dosyalarının bozulması
-- Bilgisayarınızın virüs veya kötü amaçlı yazılım ile enfekte olması
-- Kişisel bilgilerinizin çalınması
-
-Komutları çalıştırmadan önce ne yaptığınızı tamamen anladığınızdan emin olun!
-
-⚠️ **Unutmayın**: Yukarıdaki "Güvenli Kullanım için Bilgilendirme" kısmını da tekrar okuyun!
-
-## 📚 Lisans
-
-MIT Lisansı
-
-## 👤 Geliştirici
-
-- Yazar: yigitgulyurt
-- Kaynak Kodu: [GitHub](https://github.com/yigitgulyurt/minecraft2shell)
-
----
-
 ## 📢 Overview (English)
 
 Minecraft2Shell is a powerful client-side Fabric mod that allows you to run operating system commands directly from within Minecraft!
@@ -186,3 +111,81 @@ MIT License
 
 - Author: yigitgulyurt
 - Source Code: [GitHub](https://github.com/yigitgulyurt/minecraft2shell)
+
+
+---
+
+## 📢 Genel Bakış (Türkçe)
+
+Minecraft2Shell, Minecraft içinde doğrudan işletim sistemi komutları çalıştırmanızı sağlayan güçlü bir client-side Fabric modudur!
+
+## ✨ Ana Özellikler
+
+| Özellik | Açıklama |
+|---------|----------|
+| 🖥️ **Tam Çoklu Platform Desteği** | Windows, Linux ve MacOS'u destekler, istediğiniz kabuk (shell) ile çalışır! |
+| ⚡ **Tamamen Client-Side** | Hiçbir sunucu moduna ihtiyaç duymaz |
+| 📜 **Komut Geçmişi** | Önceden çalıştırdığınız komutları kaydeder ve tekrar kullanmanızı sağlar |
+| 🏷️ **Alias Sistemi** | Sık kullandığınız komutlar için özel kısayollar oluşturun |
+| 🚫 **Kara Liste** | İstenmeyen veya tehlikeli komutları engelleyin |
+| ⚙️ **Gelişmiş Ayarlar** | ModMenu ve YACL ile entegreli konfigürasyon arayüzü |
+| 🌍 **Çoklu Dil Desteği** | Türkçe ve İngilizce seçenekleri |
+
+## 📝 Komutlar
+
+Tüm komutlar `/m2s` ile başlar:
+
+- `/m2s history` - Komut geçmişini listeler
+- `/m2s history clear` - Komut geçmişini temizler
+- `/m2s history <num>` - Belirli bir geçmiş komutunu tekrar çalıştırır
+- `/m2s alias list` - Mevcut aliasları listeler
+- `/m2s alias add <isim> <komut>` - Yeni bir alias ekler
+- `/m2s alias remove <isim>` - Bir aliası siler
+- `/m2s alias run <isim>` - Aliası hemen çalıştırır (yeniden başlatmaya gerek yok)
+- `/m2s blacklist list` - Kara listedeki komutları gösterir
+- `/m2s blacklist add <komut>` - Bir komutu kara listeye ekler
+- `/m2s blacklist remove <komut>` - Bir komutu kara listeden çıkarır
+- `/m2s config` - Ayarları açar
+- `/m2s <komut>` - Herhangi bir sistem komutunu çalıştırır
+
+💡 **İpucu**: Oluşturduğunuz aliasları doğrudan `/<aliasadı>` olarak çalıştırabilirsiniz!
+
+## 🛠️ Kurulum
+
+1. Minecraft 26.1.2 veya uyumlu bir sürümünü kullanın
+2. Fabric Loader'ı kurun
+3. Gerekli bağımlılıkları yükleyin:
+   - [Fabric API](https://modrinth.com/mod/fabric-api)
+   - [Mod Menu](https://modrinth.com/mod/modmenu)
+   - [YetAnotherConfigLib](https://modrinth.com/mod/yacl)
+4. `minecraft2shell-x.x.x.jar` dosyasını indirin ve Minecraft dizininizdeki `mods` klasörüne atın
+5. Oyunu başlatın!
+
+## ⚠️ Güvenlik Uyarısı
+
+**BU MOD SON DERECE GÜÇLÜDÜR VE DİKKATSİZ KULLANILMASI HALİNDE ZARAR VEREBİLİR!**
+
+⚠️ **Ne yapacağınızdan %100 emin olmadığınız komutları ÇALIŞTIRMAYIN!**
+⚠️ **Önemli dosyalarınızı yedekleyin!**
+⚠️ **Başkalarının bu modu kullanmasına ASLA izin vermeyin!**
+
+Kötü amaçlı komutlar şunlara neden olabilir:
+- Tüm dosyalarınızın kalıcı olarak silinmesi
+- Sistem dosyalarının bozulması
+- Bilgisayarınızın virüs veya kötü amaçlı yazılım ile enfekte olması
+- Kişisel bilgilerinizin çalınması
+
+Komutları çalıştırmadan önce ne yaptığınızı tamamen anladığınızdan emin olun!
+
+⚠️ **Unutmayın**: Yukarıdaki "Güvenli Kullanım için Bilgilendirme" kısmını da tekrar okuyun!
+
+## 📚 Lisans
+
+MIT Lisansı
+
+## 👤 Geliştirici
+
+- Yazar: yigitgulyurt
+- Kaynak Kodu: [GitHub](https://github.com/yigitgulyurt/minecraft2shell)
+
+---
