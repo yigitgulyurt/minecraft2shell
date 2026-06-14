@@ -17,6 +17,7 @@ public class LanguageManager {
     
     private static final Map<String, Map<String, String>> translations = new HashMap<>();
     private static String currentLanguage = "tr";
+    private static String lastDetectedLanguage = null;
 
     static {
         loadLanguage("tr");
@@ -45,16 +46,26 @@ public class LanguageManager {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.options != null) {
                 String mcLang = mc.options.languageCode;
-                if (mcLang != null) {
-                    if (mcLang.startsWith("tr")) {
-                        setLanguage("tr");
-                    } else {
-                        setLanguage("en");
-                    }
+                String targetLanguage;
+                
+                if (mcLang != null && mcLang.startsWith("tr")) {
+                    targetLanguage = "tr";
+                } else {
+                    targetLanguage = "en";
+                }
+                
+                // Eğer değişiklik yoksa hiçbir şey yapma
+                if (!targetLanguage.equals(lastDetectedLanguage)) {
+                    setLanguage(targetLanguage);
+                    lastDetectedLanguage = targetLanguage;
                 }
             }
         } catch (Exception e) {
-            setLanguage("tr");
+            // Hata olursa yine bir kere ayarla
+            if (!"tr".equals(lastDetectedLanguage)) {
+                setLanguage("tr");
+                lastDetectedLanguage = "tr";
+            }
         }
     }
 

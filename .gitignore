@@ -39,3 +39,6 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# markdown
+GELIŞTIRME_PLANI.md
