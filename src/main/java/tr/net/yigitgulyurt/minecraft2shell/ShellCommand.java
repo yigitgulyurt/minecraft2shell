@@ -18,9 +18,8 @@ public class ShellCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 
-        // /shell <komut> - ONLY FOR CONSOLE OR OPS (temporary check)
+        // /shell <komut>
         dispatcher.register(Commands.literal("shell")
-                .requires(source -> source.getEntity() == null)
                 .then(Commands.literal("history")
                         .executes(ctx -> showHistory(ctx.getSource()))
                         .then(Commands.literal("clear")
@@ -81,7 +80,6 @@ public class ShellCommand {
                                             String name, String command) {
         try {
             dispatcher.register(Commands.literal(name)
-                    .requires(source -> source.getEntity() == null)
                     .executes(ctx -> runCommand(ctx.getSource(), command)));
         } catch (Exception e) {
             System.err.println("[minecraft2shell] Alias kaydedilemedi '" + name + "': " + e.getMessage());
@@ -90,10 +88,6 @@ public class ShellCommand {
 
     // --- /shell <cmd> ---
     public static int runCommand(CommandSourceStack source, String cmd) {
-        if (source.getEntity() != null) {
-            source.sendFailure(Component.literal("§c[m2s] Bu komut şu anda sadece konsoldan kullanılabilir!"));
-            return 0;
-        }
         ModConfig cfg = ModConfig.get();
 
         if (cfg.isBlacklisted(cmd)) {
