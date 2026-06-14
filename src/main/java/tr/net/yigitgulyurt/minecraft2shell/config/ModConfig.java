@@ -3,6 +3,7 @@ package tr.net.yigitgulyurt.minecraft2shell.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
+import tr.net.yigitgulyurt.minecraft2shell.data.LanguageManager;
 
 import java.io.*;
 import java.nio.file.*;
@@ -20,6 +21,9 @@ public class ModConfig {
     public boolean showOutput = true;
     public int historyLimit = 50;
     public int outputLineLimit = 20;
+    public boolean outputReverse = false;
+    public boolean autoRegisterAliases = true;
+    public String language = "tr";
     public List<String> blacklist = new ArrayList<>();
     public Map<String, String> aliases = new LinkedHashMap<>();
 
@@ -39,6 +43,8 @@ public class ModConfig {
             if (INSTANCE == null) INSTANCE = new ModConfig();
             if (INSTANCE.blacklist == null) INSTANCE.blacklist = new ArrayList<>();
             if (INSTANCE.aliases == null) INSTANCE.aliases = new LinkedHashMap<>();
+            if (INSTANCE.language == null) INSTANCE.language = "tr";
+            LanguageManager.setLanguage(INSTANCE.language);
         } catch (IOException e) {
             System.err.println("[minecraft2shell] Config yuklenemedi: " + e.getMessage());
             INSTANCE = new ModConfig();

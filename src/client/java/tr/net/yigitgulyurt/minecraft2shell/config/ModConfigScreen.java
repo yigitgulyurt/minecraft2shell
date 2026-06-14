@@ -4,6 +4,7 @@ import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.screens.Screen;
+import tr.net.yigitgulyurt.minecraft2shell.data.LanguageManager;
 
 public class ModConfigScreen {
 
@@ -16,17 +17,17 @@ public class ModConfigScreen {
                         .name(Component.literal("Genel"))
 
                         .option(Option.<Boolean>createBuilder()
-                                .name(Component.literal("Çıktı Göster"))
+                                .name(Component.literal(LanguageManager.get("config.show_output")))
                                 .description(OptionDescription.of(
-                                        Component.literal("Komut çıktısını chat'te göster")))
+                                        Component.literal(LanguageManager.get("config.show_output_desc"))))
                                 .binding(true, () -> cfg.showOutput, v -> cfg.showOutput = v)
                                 .controller(TickBoxControllerBuilder::create)
                                 .build())
 
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Geçmiş Limiti"))
+                                .name(Component.literal(LanguageManager.get("config.history_limit")))
                                 .description(OptionDescription.of(
-                                        Component.literal("Kaç komut geçmişi tutulsun (1-200)")))
+                                        Component.literal(LanguageManager.get("config.history_limit_desc"))))
                                 .binding(50, () -> cfg.historyLimit, v -> cfg.historyLimit = v)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt)
                                         .range(1, 200)
@@ -34,13 +35,46 @@ public class ModConfigScreen {
                                 .build())
 
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Çıktı Satır Limiti"))
+                                .name(Component.literal(LanguageManager.get("config.output_limit")))
                                 .description(OptionDescription.of(
-                                        Component.literal("Uzun çıktılarda en fazla kaç satır gösterilsin (1-100)")))
+                                        Component.literal(LanguageManager.get("config.output_limit_desc"))))
                                 .binding(20, () -> cfg.outputLineLimit, v -> cfg.outputLineLimit = v)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt)
-                                        .range(1, 100)
+                                        .range(1, 1000)
                                         .step(1))
+                                .build())
+
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.literal(LanguageManager.get("config.output_reverse")))
+                                .description(OptionDescription.of(
+                                        Component.literal(LanguageManager.get("config.output_reverse_desc"))))
+                                .binding(false, () -> cfg.outputReverse, v -> cfg.outputReverse = v)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
+
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.literal(LanguageManager.get("config.auto_register_aliases")))
+                                .description(OptionDescription.of(
+                                        Component.literal(LanguageManager.get("config.auto_register_aliases_desc"))))
+                                .binding(true, () -> cfg.autoRegisterAliases, v -> cfg.autoRegisterAliases = v)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
+
+                        .option(Option.<String>createBuilder()
+                                .name(Component.literal("Dil / Language"))
+                                .description(OptionDescription.of(
+                                        Component.literal("Modun dilini seçin / Select the mod language")))
+                                .binding("tr", () -> cfg.language, v -> {
+                                    cfg.language = v;
+                                    LanguageManager.setLanguage(v);
+                                })
+                                .controller(opt -> CyclingListControllerBuilder.create(opt)
+                                        .values(java.util.List.of("tr", "en"))
+                                        .valueFormatter(value -> {
+                                            if (value.equals("tr")) return Component.literal("Türkçe");
+                                            if (value.equals("en")) return Component.literal("English");
+                                            return Component.literal(value);
+                                        }))
                                 .build())
 
                         .build())

@@ -11,7 +11,7 @@
     "sources": "https://github.com/yigitgulyurt/minecraft2shell"
   },
   "license": "MIT",
-  "icon": "assets/minecraft2shell/icon.png",
+  "icon": "assets/minecraft2shell/minecraft2shell-icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [

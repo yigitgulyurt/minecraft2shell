@@ -9,9 +9,11 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.network.chat.Component;
 import tr.net.yigitgulyurt.minecraft2shell.config.ModConfig;
 import tr.net.yigitgulyurt.minecraft2shell.data.HistoryManager;
+import tr.net.yigitgulyurt.minecraft2shell.data.LanguageManager;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +46,11 @@ public class ShellCommand {
                                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("name", StringArgumentType.word())
                                         .executes(ctx -> removeAlias(
                                                 ctx.getSource(),
+                                                StringArgumentType.getString(ctx, "name")))))
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("run")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("name", StringArgumentType.word())
+                                        .executes(ctx -> runAlias(
+                                                ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "name"))))))
 
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("blacklist")
@@ -72,6 +79,7 @@ public class ShellCommand {
 
     // --- Alias komutlarini kaydet (/aliasadi seklinde) ---
     public static void registerAliases(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+        if (!ModConfig.get().autoRegisterAliases) return;
         for (Map.Entry<String, String> entry : ModConfig.get().aliases.entrySet()) {
             registerSingleAlias(dispatcher, entry.getKey(), entry.getValue());
         }
@@ -92,7 +100,7 @@ public class ShellCommand {
         ModConfig cfg = ModConfig.get();
 
         if (cfg.isBlacklisted(cmd)) {
-            source.sendError(Component.literal("§c[m2s] Bu komut kara listede: " + cmd));
+            source.sendError(Component.literal(LanguageManager.get("command.blacklist.error") + cmd));
             return 0;
         }
 
@@ -117,32 +125,54 @@ public class ShellCommand {
                     BufferedReader reader = new BufferedReader(
                             new InputStreamReader(process.getInputStream(), os.contains("win") ? "CP857" : "UTF-8"));
 
-                    int lineCount = 0;
-                    int limit = cfg.outputLineLimit;
+                    List<String> allLines = new ArrayList<>();
                     String line;
-
                     while ((line = reader.readLine()) != null) {
-                        if (lineCount >= limit) {
-                            final int remaining = countRemainingLines(reader);
-                            source.sendFeedback(Component.literal(
-                                    "§e[m2s] ... ve " + remaining + " satir daha (limit: "
-                                            + limit + "). Limiti /shell config'den artirabilirsin."));
-                            break;
-                        }
-                        final String output = line;
-                        source.sendFeedback(Component.literal("§7" + output));
-                        lineCount++;
+                        allLines.add(line);
                     }
+
+                    int limit = cfg.outputLineLimit;
+                    List<String> linesToShow;
+                    if (allLines.size() <= limit) {
+                        linesToShow = allLines;
+                    } else {
+                        final int remaining;
+                        if (cfg.outputReverse) {
+                            // Sondan göster
+                            linesToShow = allLines.subList(allLines.size() - limit, allLines.size());
+                            remaining = allLines.size() - limit;
+                        } else {
+                            // Baştan göster
+                            linesToShow = allLines.subList(0, limit);
+                            remaining = allLines.size() - limit;
+                        }
+                        // Mesajları render thread'inde gönder
+                        net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                            source.sendFeedback(Component.literal(
+                                    LanguageManager.get("command.output.remaining", remaining, limit)));
+                        });
+                    }
+
+                    // Çıktı satırlarını render thread'inde gönder
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        for (String outputLine : linesToShow) {
+                            source.sendFeedback(Component.literal("§7" + outputLine));
+                        }
+                    });
                 }
 
                 int exitCode = process.waitFor();
                 if (cfg.showOutput) {
-                    source.sendFeedback(Component.literal(
-                            "§a[m2s] Tamamlandi (kod: " + exitCode + ")"));
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        source.sendFeedback(Component.literal(
+                                LanguageManager.get("command.output.success", exitCode)));
+                    });
                 }
 
             } catch (Exception e) {
-                source.sendError(Component.literal("§c[m2s] Hata: " + e.getMessage()));
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    source.sendError(Component.literal(LanguageManager.get("command.error") + e.getMessage()));
+                });
             }
         }).start();
 
@@ -161,10 +191,10 @@ public class ShellCommand {
     private static int showHistory(FabricClientCommandSource source) {
         List<String> history = HistoryManager.getAll();
         if (history.isEmpty()) {
-            source.sendFeedback(Component.literal("§e[m2s] Gecmis bos."));
+            source.sendFeedback(Component.literal(LanguageManager.get("command.history.empty")));
             return 1;
         }
-        source.sendFeedback(Component.literal("§6[m2s] Komut gecmisi:"));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.history.title")));
         for (int i = 0; i < history.size(); i++) {
             final int idx = i + 1;
             final String cmd = history.get(i);
@@ -175,18 +205,18 @@ public class ShellCommand {
 
     private static int clearHistory(FabricClientCommandSource source) {
         HistoryManager.clear();
-        source.sendFeedback(Component.literal("§a[m2s] Gecmis temizlendi."));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.history.cleared")));
         return 1;
     }
 
     private static int runFromHistory(FabricClientCommandSource source, int index) {
         List<String> history = HistoryManager.getAll();
         if (index < 1 || index > history.size()) {
-            source.sendError(Component.literal("§c[m2s] Gecersiz index: " + index));
+            source.sendError(Component.literal(LanguageManager.get("command.history.invalid_index") + index));
             return 0;
         }
         String cmd = history.get(index - 1);
-        source.sendFeedback(Component.literal("§6[m2s] Calistiriliyor: " + cmd));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.history.executing") + cmd));
         return runCommand(source, cmd);
     }
 
@@ -194,33 +224,48 @@ public class ShellCommand {
     private static int listAliases(FabricClientCommandSource source) {
         Map<String, String> aliases = ModConfig.get().aliases;
         if (aliases.isEmpty()) {
-            source.sendFeedback(Component.literal("§e[m2s] Hic alias yok."));
+            source.sendFeedback(Component.literal(LanguageManager.get("command.alias.none")));
             return 1;
         }
-        source.sendFeedback(Component.literal("§6[m2s] Alias listesi:"));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.alias.title")));
         aliases.forEach((name, cmd) ->
                 source.sendFeedback(Component.literal("§7  /" + name + " -> " + cmd)));
         return 1;
+    }
+
+    private static int runAlias(FabricClientCommandSource source, String name) {
+        Map<String, String> aliases = ModConfig.get().aliases;
+        if (!aliases.containsKey(name)) {
+            source.sendError(Component.literal(LanguageManager.get("command.alias.not_found") + name));
+            return 0;
+        }
+        String cmd = aliases.get(name);
+        source.sendFeedback(Component.literal(LanguageManager.get("command.history.executing") + cmd));
+        return runCommand(source, cmd);
     }
 
     private static int addAlias(FabricClientCommandSource source, String name, String command) {
         ModConfig.get().aliases.put(name, command);
         ModConfig.save();
         source.sendFeedback(Component.literal(
-                "§a[m2s] Alias eklendi: /" + name + " -> " + command));
-        source.sendFeedback(Component.literal(
-                "§e[m2s] Alias'in aktif olmasi icin oyunu yeniden baslat."));
+                LanguageManager.get("command.alias.added") + name + " -> " + command));
+        if (ModConfig.get().autoRegisterAliases) {
+            source.sendFeedback(Component.literal(
+                    LanguageManager.get("command.alias.needs_restart")));
+        }
         return 1;
     }
 
     private static int removeAlias(FabricClientCommandSource source, String name) {
         if (ModConfig.get().aliases.remove(name) != null) {
             ModConfig.save();
-            source.sendFeedback(Component.literal("§a[m2s] Alias silindi: " + name));
-            source.sendFeedback(Component.literal(
-                    "§e[m2s] Degisiklik icin oyunu yeniden baslat."));
+            source.sendFeedback(Component.literal(LanguageManager.get("command.alias.removed") + name));
+            if (ModConfig.get().autoRegisterAliases) {
+                source.sendFeedback(Component.literal(
+                        LanguageManager.get("command.alias.needs_restart")));
+            }
         } else {
-            source.sendError(Component.literal("§c[m2s] Alias bulunamadi: " + name));
+            source.sendError(Component.literal(LanguageManager.get("command.alias.not_found") + name));
         }
         return 1;
     }
@@ -229,10 +274,10 @@ public class ShellCommand {
     private static int listBlacklist(FabricClientCommandSource source) {
         List<String> bl = ModConfig.get().blacklist;
         if (bl.isEmpty()) {
-            source.sendFeedback(Component.literal("§e[m2s] Kara liste bos."));
+            source.sendFeedback(Component.literal(LanguageManager.get("command.blacklist.empty")));
             return 1;
         }
-        source.sendFeedback(Component.literal("§6[m2s] Kara liste:"));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.blacklist.title")));
         bl.forEach(entry ->
                 source.sendFeedback(Component.literal("§7  - " + entry)));
         return 1;
@@ -241,7 +286,7 @@ public class ShellCommand {
     private static int addBlacklist(FabricClientCommandSource source, String entry) {
         ModConfig.get().blacklist.add(entry.trim().toLowerCase());
         ModConfig.save();
-        source.sendFeedback(Component.literal("§a[m2s] Kara listeye eklendi: " + entry));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.blacklist.added") + entry));
         return 1;
     }
 
@@ -249,9 +294,9 @@ public class ShellCommand {
         boolean removed = ModConfig.get().blacklist.remove(entry.trim().toLowerCase());
         if (removed) {
             ModConfig.save();
-            source.sendFeedback(Component.literal("§a[m2s] Kara listeden cikarildi: " + entry));
+            source.sendFeedback(Component.literal(LanguageManager.get("command.blacklist.removed") + entry));
         } else {
-            source.sendError(Component.literal("§c[m2s] Kara listede bulunamadi: " + entry));
+            source.sendError(Component.literal(LanguageManager.get("command.blacklist.not_found") + entry));
         }
         return 1;
     }
@@ -261,7 +306,7 @@ public class ShellCommand {
         if (Minecraft2Shell.configOpener != null) {
             Minecraft2Shell.configOpener.open();
         } else {
-            source.sendError(Component.literal("[m2s] Config ekrani bu ortamda desteklenmiyor."));
+            source.sendError(Component.literal(LanguageManager.get("command.config.not_supported")));
         }
         return 1;
     }
