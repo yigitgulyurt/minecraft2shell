@@ -1,5 +1,7 @@
 package tr.net.yigitgulyurt.minecraft2shell.data;
 
+import net.minecraft.client.Minecraft;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -79,6 +81,27 @@ public class LanguageManager {
         en.put("config.auto_register_aliases", "Auto Register Aliases");
         en.put("config.auto_register_aliases_desc", "Register aliases as separate commands (takes effect after restarting the game)");
         translations.put("en", en);
+    }
+
+    public static void detectAndSetLanguage() {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null && mc.options != null) {
+                String mcLang = mc.options.languageCode;
+                if (mcLang != null) {
+                    // Minecraft dil kodlarından mod dil kodlarına eşleştir
+                    if (mcLang.startsWith("tr")) {
+                        setLanguage("tr");
+                    } else {
+                        // Diğer tüm diller için varsayılan İngilizce
+                        setLanguage("en");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Hata olursa varsayılan dili kullan
+            setLanguage("tr");
+        }
     }
 
     public static void setLanguage(String lang) {

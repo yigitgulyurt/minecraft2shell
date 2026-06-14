@@ -23,7 +23,6 @@ public class ModConfig {
     public int outputLineLimit = 20;
     public boolean outputReverse = false;
     public boolean autoRegisterAliases = true;
-    public String language = "tr";
     public List<String> blacklist = new ArrayList<>();
     public Map<String, String> aliases = new LinkedHashMap<>();
 
@@ -43,8 +42,8 @@ public class ModConfig {
             if (INSTANCE == null) INSTANCE = new ModConfig();
             if (INSTANCE.blacklist == null) INSTANCE.blacklist = new ArrayList<>();
             if (INSTANCE.aliases == null) INSTANCE.aliases = new LinkedHashMap<>();
-            if (INSTANCE.language == null) INSTANCE.language = "tr";
-            LanguageManager.setLanguage(INSTANCE.language);
+            // Dil ayarını artık otomatik algıla
+            LanguageManager.detectAndSetLanguage();
         } catch (IOException e) {
             System.err.println("[minecraft2shell] Config yuklenemedi: " + e.getMessage());
             INSTANCE = new ModConfig();
@@ -60,7 +59,7 @@ public class ModConfig {
         }
     }
 
-    // --- Kara liste kontrolu (prefix match) ---
+    // --- Kara liste kontrolü (prefix match) ---
     public boolean isBlacklisted(String command) {
         String cmd = command.trim().toLowerCase();
         for (String entry : blacklist) {

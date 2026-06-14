@@ -11,7 +11,7 @@ public class Minecraft2ShellClient implements ClientModInitializer, ModMenuApi {
 
     @Override
     public void onInitializeClient() {
-        // Config'i yükle
+        // Config'i yükle (bu aynı zamanda dili de algılar)
         ModConfig.load();
         
         // ConfigOpener'ı ayarla

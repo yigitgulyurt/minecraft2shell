@@ -10,11 +10,13 @@ public class ModConfigScreen {
 
     public static Screen create(Screen parent) {
         ModConfig cfg = ModConfig.get();
+        // Config ekranını açarken dili tekrar algıla (eğer oyuncu oyunda dili değiştirmişse)
+        LanguageManager.detectAndSetLanguage();
 
         return YetAnotherConfigLib.createBuilder()
                 .title(Component.literal("Minecraft2Shell"))
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.literal("Genel"))
+                        .name(Component.literal(LanguageManager.get("config.general")))
 
                         .option(Option.<Boolean>createBuilder()
                                 .name(Component.literal(LanguageManager.get("config.show_output")))
@@ -58,23 +60,6 @@ public class ModConfigScreen {
                                         Component.literal(LanguageManager.get("config.auto_register_aliases_desc"))))
                                 .binding(true, () -> cfg.autoRegisterAliases, v -> cfg.autoRegisterAliases = v)
                                 .controller(TickBoxControllerBuilder::create)
-                                .build())
-
-                        .option(Option.<String>createBuilder()
-                                .name(Component.literal("Dil / Language"))
-                                .description(OptionDescription.of(
-                                        Component.literal("Modun dilini seçin / Select the mod language")))
-                                .binding("tr", () -> cfg.language, v -> {
-                                    cfg.language = v;
-                                    LanguageManager.setLanguage(v);
-                                })
-                                .controller(opt -> CyclingListControllerBuilder.create(opt)
-                                        .values(java.util.List.of("tr", "en"))
-                                        .valueFormatter(value -> {
-                                            if (value.equals("tr")) return Component.literal("Türkçe");
-                                            if (value.equals("en")) return Component.literal("English");
-                                            return Component.literal(value);
-                                        }))
                                 .build())
 
                         .build())

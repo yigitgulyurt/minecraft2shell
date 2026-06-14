@@ -12,11 +12,8 @@
   },
   "license": "MIT",
   "icon": "assets/minecraft2shell/minecraft2shell-icon.png",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
-    "main": [
-      "tr.net.yigitgulyurt.minecraft2shell.Minecraft2Shell"
-    ],
     "client": [
       "tr.net.yigitgulyurt.minecraft2shell.Minecraft2ShellClient"
     ],
