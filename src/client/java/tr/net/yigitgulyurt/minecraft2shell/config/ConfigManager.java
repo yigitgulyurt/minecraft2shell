@@ -2,14 +2,12 @@ package tr.net.yigitgulyurt.minecraft2shell.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.*;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class ConfigManager {
@@ -43,7 +41,7 @@ public class ConfigManager {
     }
     
     public static class BlacklistEntry {
-        public String type; // "wildcard", "specific", "regex"
+        public String type; // "specific", "wildcard", "regex"
         public String pattern;
         
         public BlacklistEntry() {}
@@ -107,18 +105,129 @@ public class ConfigManager {
     }
     
     public static void loadAll() {
-        config = loadJson(CONFIG_FILE, ModConfig.class, new ModConfig());
-        blacklist = loadJsonList(BLACKLIST_FILE, BlacklistEntry.class, new ArrayList<>());
-        aliases = loadJsonMap(ALIASES_FILE, String.class, String.class, new LinkedHashMap<>());
-        history = loadJsonList(HISTORY_FILE, HistoryEntry.class, new ArrayList<>());
-        themes = loadJsonMap(THEMES_FILE, String.class, Theme.class, new LinkedHashMap<>());
+        // Herhangi bir dosya okunamazsa veya formatı bozuksa varsayılanı kullan
+        try {
+            config = loadJson(CONFIG_FILE, ModConfig.class, new ModConfig());
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Config yüklenemedi, varsayılan kullanılıyor: " + e.getMessage());
+            config = new ModConfig();
+            saveJson(CONFIG_FILE, config);
+        }
+
+        try {
+            blacklist = loadBlacklist();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Blacklist yüklenemedi, temizleniyor: " + e.getMessage());
+            blacklist = new ArrayList<>();
+            saveBlacklist();
+        }
+
+        try {
+            aliases = loadAliases();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Aliases yüklenemedi, temizleniyor: " + e.getMessage());
+            aliases = new LinkedHashMap<>();
+            saveAliases();
+        }
+
+        try {
+            history = loadHistory();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] History yüklenemedi, temizleniyor: " + e.getMessage());
+            history = new ArrayList<>();
+            saveHistory();
+        }
+
+        try {
+            themes = loadThemes();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Temalar yüklenemedi, temizleniyor: " + e.getMessage());
+            themes = new LinkedHashMap<>();
+            loadDefaultThemes();
+        }
     }
     
     public static void saveAll() {
         saveJson(CONFIG_FILE, config);
+        saveBlacklist();
+        saveAliases();
+        saveHistory();
+        saveThemes();
+    }
+    
+    private static List<BlacklistEntry> loadBlacklist() {
+        if (!Files.exists(BLACKLIST_FILE)) {
+            saveBlacklist();
+            return new ArrayList<>();
+        }
+        try (Reader reader = Files.newBufferedReader(BLACKLIST_FILE)) {
+            TypeToken<List<BlacklistEntry>> type = new TypeToken<List<BlacklistEntry>>() {};
+            List<BlacklistEntry> list = GSON.fromJson(reader, type.getType());
+            return list != null ? list : new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Blacklist okunurken hata: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+    
+    private static void saveBlacklist() {
         saveJson(BLACKLIST_FILE, blacklist);
+    }
+    
+    private static Map<String, String> loadAliases() {
+        if (!Files.exists(ALIASES_FILE)) {
+            saveAliases();
+            return new LinkedHashMap<>();
+        }
+        try (Reader reader = Files.newBufferedReader(ALIASES_FILE)) {
+            TypeToken<Map<String, String>> type = new TypeToken<Map<String, String>>() {};
+            Map<String, String> map = GSON.fromJson(reader, type.getType());
+            return map != null ? map : new LinkedHashMap<>();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Aliases okunurken hata: " + e.getMessage());
+            return new LinkedHashMap<>();
+        }
+    }
+    
+    private static void saveAliases() {
         saveJson(ALIASES_FILE, aliases);
+    }
+    
+    private static List<HistoryEntry> loadHistory() {
+        if (!Files.exists(HISTORY_FILE)) {
+            saveHistory();
+            return new ArrayList<>();
+        }
+        try (Reader reader = Files.newBufferedReader(HISTORY_FILE)) {
+            TypeToken<List<HistoryEntry>> type = new TypeToken<List<HistoryEntry>>() {};
+            List<HistoryEntry> list = GSON.fromJson(reader, type.getType());
+            return list != null ? list : new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] History okunurken hata: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+    
+    private static void saveHistory() {
         saveJson(HISTORY_FILE, history);
+    }
+    
+    private static Map<String, Theme> loadThemes() {
+        if (!Files.exists(THEMES_FILE)) {
+            loadDefaultThemes();
+            return themes;
+        }
+        try (Reader reader = Files.newBufferedReader(THEMES_FILE)) {
+            TypeToken<Map<String, Theme>> type = new TypeToken<Map<String, Theme>>() {};
+            Map<String, Theme> map = GSON.fromJson(reader, type.getType());
+            return map != null ? map : new LinkedHashMap<>();
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Temalar okunurken hata: " + e.getMessage());
+            return new LinkedHashMap<>();
+        }
+    }
+    
+    public static void saveThemes() {
         saveJson(THEMES_FILE, themes);
     }
     
@@ -129,11 +238,11 @@ public class ConfigManager {
     public static List<BlacklistEntry> getBlacklist() { return blacklist; }
     public static void addToBlacklist(String type, String pattern) {
         blacklist.add(new BlacklistEntry(type, pattern));
-        saveJson(BLACKLIST_FILE, blacklist);
+        saveBlacklist();
     }
     public static boolean removeFromBlacklist(String pattern) {
         boolean removed = blacklist.removeIf(e -> e.pattern.equals(pattern));
-        saveJson(BLACKLIST_FILE, blacklist);
+        saveBlacklist();
         return removed;
     }
     
@@ -163,7 +272,7 @@ public class ConfigManager {
                 return false;
         }
     }
-
+    
     private static boolean wildcardMatch(String text, String pattern) {
         String regex = pattern
                 .replace(".", "\\.")
@@ -175,32 +284,32 @@ public class ConfigManager {
     public static Map<String, String> getAliases() { return aliases; }
     public static void setAliases(Map<String, String> map) {
         aliases = map;
-        saveJson(ALIASES_FILE, aliases);
+        saveAliases();
     }
     public static void addAlias(String name, String command) {
         aliases.put(name, command);
-        saveJson(ALIASES_FILE, aliases);
+        saveAliases();
     }
     public static void removeAlias(String name) {
         aliases.remove(name);
-        saveJson(ALIASES_FILE, aliases);
+        saveAliases();
     }
     
     public static List<HistoryEntry> getHistory() { return history; }
     public static void setHistory(List<HistoryEntry> list) {
         history = list;
-        saveJson(HISTORY_FILE, history);
+        saveHistory();
     }
     public static void addHistory(String command, String timestamp) {
         history.add(new HistoryEntry(command, timestamp));
         if (history.size() > config.historyLimit) {
             history.remove(0);
         }
-        saveJson(HISTORY_FILE, history);
+        saveHistory();
     }
     public static void clearHistory() {
         history.clear();
-        saveJson(HISTORY_FILE, history);
+        saveHistory();
     }
     
     public static Map<String, Theme> getThemes() { return themes; }
@@ -208,12 +317,9 @@ public class ConfigManager {
         String themeName = config.currentTheme;
         return themes.getOrDefault(themeName, themes.get("default"));
     }
-    public static void saveThemes() {
-        saveJson(THEMES_FILE, themes);
-    }
     
     // --- JSON Helpers ---
-    
+
     private static <T> T loadJson(Path path, Class<T> clazz, T defaultValue) {
         if (!Files.exists(path)) {
             saveJson(path, defaultValue);
@@ -227,44 +333,89 @@ public class ConfigManager {
             return defaultValue;
         }
     }
-    
-    private static <T> List<T> loadJsonList(Path path, Class<T> clazz, List<T> defaultValue) {
-        if (!Files.exists(path)) {
-            saveJson(path, defaultValue);
-            return defaultValue;
-        }
-        try (Reader reader = Files.newBufferedReader(path)) {
-            com.google.gson.reflect.TypeToken<List<T>> token = 
-                new com.google.gson.reflect.TypeToken<List<T>>(){};
-            List<T> result = GSON.fromJson(reader, token.getType());
-            return result != null ? result : defaultValue;
-        } catch (Exception e) {
-            System.err.println("[minecraft2shell] Liste yüklenemedi " + path + ": " + e.getMessage());
-            return defaultValue;
-        }
-    }
-    
-    private static <K, V> Map<K, V> loadJsonMap(Path path, Class<K> keyClazz, Class<V> valueClazz, Map<K, V> defaultValue) {
-        if (!Files.exists(path)) {
-            saveJson(path, defaultValue);
-            return defaultValue;
-        }
-        try (Reader reader = Files.newBufferedReader(path)) {
-            com.google.gson.reflect.TypeToken<Map<K, V>> token = 
-                new com.google.gson.reflect.TypeToken<Map<K, V>>(){};
-            Map<K, V> result = GSON.fromJson(reader, token.getType());
-            return result != null ? result : defaultValue;
-        } catch (Exception e) {
-            System.err.println("[minecraft2shell] Harita yüklenemedi " + path + ": " + e.getMessage());
-            return defaultValue;
-        }
-    }
-    
+
     private static void saveJson(Path path, Object data) {
         try (Writer writer = Files.newBufferedWriter(path)) {
             GSON.toJson(data, writer);
         } catch (IOException e) {
             System.err.println("[minecraft2shell] Dosya kaydedilemedi " + path + ": " + e.getMessage());
+        }
+    }
+    
+    // --- Config Import/Export ---
+    
+    public static boolean exportConfig(Path exportDir) {
+        try {
+            if (!Files.exists(exportDir)) {
+                Files.createDirectories(exportDir);
+            }
+            
+            // Tüm dosyaları dışa aktar
+            Path[] files = {CONFIG_FILE, BLACKLIST_FILE, ALIASES_FILE, HISTORY_FILE, THEMES_FILE};
+            for (Path file : files) {
+                if (Files.exists(file)) {
+                    Files.copy(file, exportDir.resolve(file.getFileName()));
+                }
+            }
+            
+            // Output klasörünü dışa aktar
+            if (Files.exists(OUTPUT_DIR)) {
+                Path exportOutputDir = exportDir.resolve(OUTPUT_DIR.getFileName());
+                if (!Files.exists(exportOutputDir)) {
+                    Files.createDirectories(exportOutputDir);
+                }
+                try (var stream = Files.list(OUTPUT_DIR)) {
+                    stream.forEach(source -> {
+                        try {
+                            Files.copy(source, exportOutputDir.resolve(source.getFileName()));
+                        } catch (IOException e) {
+                            System.err.println("[minecraft2shell] Output dosyası kopyalanamadı: " + e.getMessage());
+                        }
+                    });
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Config dışa aktarılamadı: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    public static boolean importConfig(Path importDir) {
+        try {
+            if (!Files.exists(importDir)) {
+                return false;
+            }
+            
+            // Tüm dosyaları içe aktar
+            Path[] files = {CONFIG_FILE, BLACKLIST_FILE, ALIASES_FILE, HISTORY_FILE, THEMES_FILE};
+            for (Path file : files) {
+                Path sourceFile = importDir.resolve(file.getFileName());
+                if (Files.exists(sourceFile)) {
+                    Files.copy(sourceFile, file);
+                }
+            }
+            
+            // Output klasörünü içe aktar
+            Path importOutputDir = importDir.resolve(OUTPUT_DIR.getFileName());
+            if (Files.exists(importOutputDir)) {
+                try (var stream = Files.list(importOutputDir)) {
+                    stream.forEach(source -> {
+                        try {
+                            Files.copy(source, OUTPUT_DIR.resolve(source.getFileName()));
+                        } catch (IOException e) {
+                            System.err.println("[minecraft2shell] Output dosyası içe aktarılamadı: " + e.getMessage());
+                        }
+                    });
+                }
+            }
+            
+            // Yeni configleri yükle
+            loadAll();
+            return true;
+        } catch (Exception e) {
+            System.err.println("[minecraft2shell] Config içe aktarılamadı: " + e.getMessage());
+            return false;
         }
     }
 }

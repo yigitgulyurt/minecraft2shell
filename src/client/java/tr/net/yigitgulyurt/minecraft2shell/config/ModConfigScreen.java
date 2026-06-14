@@ -9,6 +9,7 @@ import tr.net.yigitgulyurt.minecraft2shell.data.LanguageManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ModConfigScreen {
 
@@ -78,29 +79,95 @@ public class ModConfigScreen {
                         .controller(TickBoxControllerBuilder::create)
                         .build())
 
-
-
                 .build());
 
-        // Tema Kategorisi - şimdilik devre dışı
-        /*
+        // Tema Kategorisi
         ConfigCategory.Builder themeCategory = ConfigCategory.createBuilder()
-                .name(Component.literal("Themes"));
-
-        // Tema Seçimi - basitleştirilmiş
-        List<String> themeNames = new ArrayList<>(ConfigManager.getThemes().keySet());
+                .name(Component.literal(LanguageManager.get("config.themes")));
+        
+        // Geçerli bir tema olduğundan emin ol
+        Map<String, ConfigManager.Theme> themesMap = ConfigManager.getThemes();
+        if (!themesMap.containsKey(cfg.currentTheme)) {
+            cfg.currentTheme = "default";
+        }
+        
+        // Tema Seçimi - Basit metin girişi (dropdown sorunlarını önlemek için)
         themeCategory.option(Option.<String>createBuilder()
-                .name(Component.literal("Select Theme"))
+                .name(Component.literal(LanguageManager.get("config.select_theme")))
                 .description(OptionDescription.of(
-                        Component.literal("Choose which theme to use")))
+                        Component.literal(LanguageManager.get("config.select_theme.desc"))))
                 .binding("default", () -> cfg.currentTheme, v -> cfg.currentTheme = v)
-                .controller(opt -> StringControllerBuilder.create(opt))
+                .controller(StringControllerBuilder::create)
                 .build());
 
         builder.category(themeCategory.build());
-        */
 
-        // History, Alias ve Blacklist kategorileri - şimdilik basit
+        // Aliaslar Kategorisi
+        ConfigCategory.Builder aliasCategory = ConfigCategory.createBuilder()
+                .name(Component.literal(LanguageManager.get("config.aliases")));
+        
+        Map<String, String> aliasesMap = ConfigManager.getAliases();
+        boolean hasAliasOptions = false;
+        if (!aliasesMap.isEmpty()) {
+            for (Map.Entry<String, String> entry : aliasesMap.entrySet()) {
+                aliasCategory.option(Option.<String>createBuilder()
+                        .name(Component.literal("/" + entry.getKey()))
+                        .description(OptionDescription.of(Component.literal("Command: " + entry.getValue())))
+                        .binding(entry.getValue(), () -> entry.getValue(), v -> {})
+                        .controller(StringControllerBuilder::create)
+                        .available(false)
+                        .build());
+                hasAliasOptions = true;
+            }
+        }
+        // Sadece opsiyon varsa kategoriyi ekle
+        if (hasAliasOptions) {
+            builder.category(aliasCategory.build());
+        }
+
+        // Kara Liste Kategorisi
+        ConfigCategory.Builder blacklistCategory = ConfigCategory.createBuilder()
+                .name(Component.literal(LanguageManager.get("config.blacklist")));
+        
+        List<ConfigManager.BlacklistEntry> blacklistEntries = ConfigManager.getBlacklist();
+        boolean hasBlacklistOptions = false;
+        if (!blacklistEntries.isEmpty()) {
+            for (ConfigManager.BlacklistEntry entry : blacklistEntries) {
+                blacklistCategory.option(Option.<String>createBuilder()
+                        .name(Component.literal("[" + entry.type + "] " + entry.pattern))
+                        .binding(entry.pattern, () -> entry.pattern, v -> {})
+                        .controller(StringControllerBuilder::create)
+                        .available(false)
+                        .build());
+                hasBlacklistOptions = true;
+            }
+        }
+        if (hasBlacklistOptions) {
+            builder.category(blacklistCategory.build());
+        }
+
+        // Geçmiş Kategorisi
+        ConfigCategory.Builder historyCategory = ConfigCategory.createBuilder()
+                .name(Component.literal(LanguageManager.get("config.history")));
+        
+        List<ConfigManager.HistoryEntry> historyEntries = ConfigManager.getHistory();
+        boolean hasHistoryOptions = false;
+        if (!historyEntries.isEmpty()) {
+            for (int i = historyEntries.size() - 1; i >= Math.max(0, historyEntries.size() - 50); i--) {
+                ConfigManager.HistoryEntry entry = historyEntries.get(i);
+                historyCategory.option(Option.<String>createBuilder()
+                        .name(Component.literal(entry.timestamp))
+                        .description(OptionDescription.of(Component.literal(entry.command)))
+                        .binding(entry.command, () -> entry.command, v -> {})
+                        .controller(StringControllerBuilder::create)
+                        .available(false)
+                        .build());
+                hasHistoryOptions = true;
+            }
+        }
+        if (hasHistoryOptions) {
+            builder.category(historyCategory.build());
+        }
 
         return builder.build().generateScreen(parent);
     }

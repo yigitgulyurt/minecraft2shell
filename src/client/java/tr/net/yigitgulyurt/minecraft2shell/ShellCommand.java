@@ -24,6 +24,7 @@ import java.util.Map;
 
 public class ShellCommand {
     private static String pendingCommand = null;
+    private static String pendingSaveFilename = null;
     private static CommandDispatcher<FabricClientCommandSource> currentDispatcher = null;
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -63,11 +64,21 @@ public class ShellCommand {
                                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("pattern", StringArgumentType.greedyString())
                                         .executes(ctx -> removeBlacklist(ctx.getSource(), StringArgumentType.getString(ctx, "pattern"))))))
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("config")
-                        .executes(ctx -> openConfig(ctx.getSource())))
+                        .executes(ctx -> openConfig(ctx.getSource()))
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("export")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("path", StringArgumentType.greedyString())
+                                        .executes(ctx -> exportConfig(ctx.getSource(), StringArgumentType.getString(ctx, "path")))))
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("import")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("path", StringArgumentType.greedyString())
+                                        .executes(ctx -> importConfig(ctx.getSource(), StringArgumentType.getString(ctx, "path"))))))
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("save")
                         .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("filename", StringArgumentType.word())
                                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("command", StringArgumentType.greedyString())
                                         .executes(ctx -> saveCommandOutput(ctx.getSource(), StringArgumentType.getString(ctx, "filename"), StringArgumentType.getString(ctx, "command"))))))
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("schedule")
+                        .then(RequiredArgumentBuilder.<FabricClientCommandSource, Integer>argument("seconds", IntegerArgumentType.integer(1))
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("command", StringArgumentType.greedyString())
+                                        .executes(ctx -> scheduleCommand(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "seconds"), StringArgumentType.getString(ctx, "command"))))))
                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("cmd", StringArgumentType.greedyString())
                         .executes(ctx -> {
                             String cmd = StringArgumentType.getString(ctx, "cmd");
@@ -118,6 +129,7 @@ public class ShellCommand {
 
         if (ConfigManager.getConfig().confirmCommand) {
             pendingCommand = cmd;
+            pendingSaveFilename = filename;
             sendConfirmMessage(source, cmd);
             return 1;
         }
@@ -226,6 +238,7 @@ public class ShellCommand {
 
         if (ConfigManager.getConfig().confirmCommand) {
             pendingCommand = cmd;
+            pendingSaveFilename = savePath;
             sendConfirmMessage(source, cmd);
             return 1;
         }
@@ -329,11 +342,13 @@ public class ShellCommand {
             return 0;
         }
         String cmd = pendingCommand;
+        String savePath = pendingSaveFilename;
         pendingCommand = null;
+        pendingSaveFilename = null;
         ModConfig cfg = ConfigManager.getConfig();
         boolean oldConfirm = cfg.confirmCommand;
         cfg.confirmCommand = false;
-        int result = runCommandInternal(source, cmd, null);
+        int result = runCommandInternal(source, cmd, savePath);
         cfg.confirmCommand = oldConfirm;
         return result;
     }
@@ -345,6 +360,7 @@ public class ShellCommand {
             return 0;
         }
         pendingCommand = null;
+        pendingSaveFilename = null;
         source.sendFeedback(Component.literal(theme.prefix + " " + theme.error + LanguageManager.get("command.confirm.cancelled")));
         return 1;
     }
@@ -499,6 +515,59 @@ public class ShellCommand {
             ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
             source.sendError(Component.literal(theme.error + LanguageManager.get("command.config.not_supported")));
         }
+        return 1;
+    }
+
+    private static int exportConfig(FabricClientCommandSource source, String pathStr) {
+        ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+        try {
+            Path path = Path.of(pathStr);
+            boolean success = ConfigManager.exportConfig(path);
+            if (success) {
+                source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + "Config dışa aktarıldı: " + path.toAbsolutePath()));
+            } else {
+                source.sendError(Component.literal(theme.error + "Config dışa aktarılamadı!"));
+            }
+        } catch (Exception e) {
+            source.sendError(Component.literal(theme.error + "Geçersiz yol: " + pathStr));
+        }
+        return 1;
+    }
+
+    private static int importConfig(FabricClientCommandSource source, String pathStr) {
+        ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+        try {
+            Path path = Path.of(pathStr);
+            boolean success = ConfigManager.importConfig(path);
+            if (success) {
+                source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + "Config içe aktarıldı!"));
+                if (currentDispatcher != null) {
+                    registerAliases(currentDispatcher);
+                }
+            } else {
+                source.sendError(Component.literal(theme.error + "Config içe aktarılamadı!"));
+            }
+        } catch (Exception e) {
+            source.sendError(Component.literal(theme.error + "Geçersiz yol: " + pathStr));
+        }
+        return 1;
+    }
+
+    private static int scheduleCommand(FabricClientCommandSource source, int seconds, String command) {
+        ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+        source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + "Komut " + seconds + " saniye sonra çalıştırılacak: " + command));
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(seconds * 1000L);
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    runCommand(source, command);
+                });
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+
         return 1;
     }
 }
