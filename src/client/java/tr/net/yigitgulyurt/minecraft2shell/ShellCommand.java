@@ -3,7 +3,8 @@ package tr.net.yigitgulyurt.minecraft2shell;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.network.chat.Component;
 import tr.net.yigitgulyurt.minecraft2shell.config.ModConfig;
@@ -19,50 +20,50 @@ public class ShellCommand {
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
 
         // /shell <komut> - ONLY CLIENT-SIDE
-        dispatcher.register(ClientCommandManager.literal("shell")
-                .then(ClientCommandManager.literal("history")
+        dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("shell")
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("history")
                         .executes(ctx -> showHistory(ctx.getSource()))
-                        .then(ClientCommandManager.literal("clear")
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("clear")
                                 .executes(ctx -> clearHistory(ctx.getSource())))
-                        .then(ClientCommandManager.argument("index", IntegerArgumentType.integer(1))
+                        .then(RequiredArgumentBuilder.<FabricClientCommandSource, Integer>argument("index", IntegerArgumentType.integer(1))
                                 .executes(ctx -> runFromHistory(
                                         ctx.getSource(),
                                         IntegerArgumentType.getInteger(ctx, "index")))))
 
-                .then(ClientCommandManager.literal("alias")
-                        .then(ClientCommandManager.literal("list")
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("alias")
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("list")
                                 .executes(ctx -> listAliases(ctx.getSource())))
-                        .then(ClientCommandManager.literal("add")
-                                .then(ClientCommandManager.argument("name", StringArgumentType.word())
-                                        .then(ClientCommandManager.argument("command", StringArgumentType.greedyString())
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("add")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("name", StringArgumentType.word())
+                                        .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("command", StringArgumentType.greedyString())
                                                 .executes(ctx -> addAlias(
                                                         ctx.getSource(),
                                                         StringArgumentType.getString(ctx, "name"),
-                                                        StringArgumentType.getString(ctx, "command")))))
-                        .then(ClientCommandManager.literal("remove")
-                                .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                                                        StringArgumentType.getString(ctx, "command"))))))
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("remove")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("name", StringArgumentType.word())
                                         .executes(ctx -> removeAlias(
                                                 ctx.getSource(),
-                                                StringArgumentType.getString(ctx, "name")))))
+                                                StringArgumentType.getString(ctx, "name"))))))
 
-                .then(ClientCommandManager.literal("blacklist")
-                        .then(ClientCommandManager.literal("list")
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("blacklist")
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("list")
                                 .executes(ctx -> listBlacklist(ctx.getSource())))
-                        .then(ClientCommandManager.literal("add")
-                                .then(ClientCommandManager.argument("entry", StringArgumentType.greedyString())
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("add")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("entry", StringArgumentType.greedyString())
                                         .executes(ctx -> addBlacklist(
                                                 ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "entry")))))
-                        .then(ClientCommandManager.literal("remove")
-                                .then(ClientCommandManager.argument("entry", StringArgumentType.greedyString())
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("remove")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("entry", StringArgumentType.greedyString())
                                         .executes(ctx -> removeBlacklist(
                                                 ctx.getSource(),
-                                                StringArgumentType.getString(ctx, "entry")))))
+                                                StringArgumentType.getString(ctx, "entry"))))))
 
-                .then(ClientCommandManager.literal("config")
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("config")
                         .executes(ctx -> openConfig(ctx.getSource())))
 
-                .then(ClientCommandManager.argument("cmd", StringArgumentType.greedyString())
+                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("cmd", StringArgumentType.greedyString())
                         .executes(ctx -> runCommand(
                                 ctx.getSource(),
                                 StringArgumentType.getString(ctx, "cmd"))))
@@ -79,7 +80,7 @@ public class ShellCommand {
     public static void registerSingleAlias(CommandDispatcher<FabricClientCommandSource> dispatcher,
                                             String name, String command) {
         try {
-            dispatcher.register(ClientCommandManager.literal(name)
+            dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal(name)
                     .executes(ctx -> runCommand(ctx.getSource(), command)));
         } catch (Exception e) {
             System.err.println("[minecraft2shell] Alias kaydedilemedi '" + name + "': " + e.getMessage());
@@ -128,7 +129,8 @@ public class ShellCommand {
                                             + limit + "). Limiti /shell config'den artirabilirsin."));
                             break;
                         }
-                        source.sendFeedback(Component.literal("§7" + line));
+                        final String output = line;
+                        source.sendFeedback(Component.literal("§7" + output));
                         lineCount++;
                     }
                 }
