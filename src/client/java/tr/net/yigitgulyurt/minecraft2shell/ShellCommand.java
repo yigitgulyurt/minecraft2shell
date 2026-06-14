@@ -284,7 +284,7 @@ public class ShellCommand {
                         ConfigManager.Theme finalTheme = ConfigManager.getCurrentTheme();
                         final String finalPathStr = savePath;
                         net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                            source.sendError(Component.literal(finalTheme.error + "File could not be saved: " + finalPathStr + " - " + e.getMessage()));
+                            source.sendError(Component.literal(finalTheme.error + LanguageManager.get("error.file_cannot_save") + finalPathStr + " - " + e.getMessage()));
                         });
                     }
                 }
@@ -384,15 +384,22 @@ public class ShellCommand {
     private static String getBetterErrorMessage(Exception e) {
         String message = e.getMessage();
         if (message == null) message = e.getClass().getSimpleName();
+        String lowerMsg = message.toLowerCase();
 
-        if (message.toLowerCase().contains("cannot run program")) {
-            return "Command could not be run - is the command correct?";
-        } else if (message.toLowerCase().contains("access denied") || message.toLowerCase().contains("permission denied")) {
-            return "Access denied - you don't have permission";
-        } else if (message.toLowerCase().contains("no such file") || message.toLowerCase().contains("dosya yok")) {
-            return "File/directory not found";
+        if (lowerMsg.contains("cannot run program")) {
+            return LanguageManager.get("error.cannot_run_program");
+        } else if (lowerMsg.contains("access denied")) {
+            return LanguageManager.get("error.access_denied");
+        } else if (lowerMsg.contains("permission denied")) {
+            return LanguageManager.get("error.permission_denied");
+        } else if (lowerMsg.contains("no such file") || lowerMsg.contains("dosya yok") || lowerMsg.contains("the system cannot find the file")) {
+            return LanguageManager.get("error.file_not_found");
+        } else if (lowerMsg.contains("network") || lowerMsg.contains("socket") || lowerMsg.contains("connection")) {
+            return LanguageManager.get("error.network_error");
+        } else if (lowerMsg.contains("i/o") || lowerMsg.contains("ioexception")) {
+            return LanguageManager.get("error.io_error") + message;
         } else {
-            return LanguageManager.get("command.error") + message;
+            return LanguageManager.get("error.unknown") + message;
         }
     }
 
@@ -545,7 +552,7 @@ public class ShellCommand {
                 source.sendError(Component.literal(theme.error + "Config dışa aktarılamadı!"));
             }
         } catch (Exception e) {
-            source.sendError(Component.literal(theme.error + "Geçersiz yol: " + pathStr));
+            source.sendError(Component.literal(theme.error + LanguageManager.get("error.invalid_path") + pathStr));
         }
         return 1;
     }
@@ -564,7 +571,7 @@ public class ShellCommand {
                 source.sendError(Component.literal(theme.error + "Config içe aktarılamadı!"));
             }
         } catch (Exception e) {
-            source.sendError(Component.literal(theme.error + "Geçersiz yol: " + pathStr));
+            source.sendError(Component.literal(theme.error + LanguageManager.get("error.invalid_path") + pathStr));
         }
         return 1;
     }
