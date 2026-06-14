@@ -52,13 +52,65 @@ public class ConfigManager {
     }
     
     public static class Theme {
-        public String prefix = "§6[m2s]";
+        public String prefix = "§f[m2s]";
         public String info = "§e";
         public String success = "§a";
         public String error = "§c";
         public String output = "§7";
         
         public Theme() {}
+    }
+    
+    // Minecraft renk isimleri -> kodları eşleşmesi
+    private static final Map<String, String> COLOR_NAME_TO_CODE = Map.ofEntries(
+            Map.entry("black", "§0"),
+            Map.entry("dark_blue", "§1"),
+            Map.entry("dark_green", "§2"),
+            Map.entry("dark_aqua", "§3"),
+            Map.entry("dark_red", "§4"),
+            Map.entry("dark_purple", "§5"),
+            Map.entry("gold", "§6"),
+            Map.entry("gray", "§7"),
+            Map.entry("dark_gray", "§8"),
+            Map.entry("blue", "§9"),
+            Map.entry("green", "§a"),
+            Map.entry("aqua", "§b"),
+            Map.entry("red", "§c"),
+            Map.entry("light_purple", "§d"),
+            Map.entry("yellow", "§e"),
+            Map.entry("white", "§f"),
+            Map.entry("dark blue", "§1"),
+            Map.entry("dark green", "§2"),
+            Map.entry("dark aqua", "§3"),
+            Map.entry("dark red", "§4"),
+            Map.entry("dark purple", "§5"),
+            Map.entry("dark gray", "§8"),
+            Map.entry("light purple", "§d")
+    );
+
+    // Renk ismini koduna çeviren yardımcı fonksiyon (basit ve güvenilir)
+    private static String resolveColor(String input) {
+        if (input == null || input.isBlank()) return "§e";
+        String trimmed = input.trim();
+        
+        // 1. Önce direkt olarak geçerli bir kod mu? (§x, x 0-9 a-f)
+        if (trimmed.length() == 2 && trimmed.charAt(0) == '§') {
+            char c = Character.toLowerCase(trimmed.charAt(1));
+            if ("0123456789abcdef".indexOf(c) != -1) {
+                return "§" + c;
+            }
+        }
+        
+        // 2. Tüm § karakterlerini kaldır ve kalanı temizle
+        String clean = trimmed.replaceAll("§.", "").trim().toLowerCase();
+        
+        // 3. Temizlenmiş metni renk ismi olarak ara
+        if (COLOR_NAME_TO_CODE.containsKey(clean)) {
+            return COLOR_NAME_TO_CODE.get(clean);
+        }
+        
+        // 4. Hiçbir şey bulunamazsa varsayılan renk
+        return "§e";
     }
     
     public static void initialize() {
@@ -85,7 +137,7 @@ public class ConfigManager {
             themes.put("default", new Theme());
             
             Theme dark = new Theme();
-            dark.prefix = "§5[m2s]";
+            dark.prefix = "§f[m2s]";
             dark.info = "§d";
             dark.success = "§2";
             dark.error = "§4";
@@ -93,7 +145,7 @@ public class ConfigManager {
             themes.put("dark", dark);
             
             Theme light = new Theme();
-            light.prefix = "§b[m2s]";
+            light.prefix = "§f[m2s]";
             light.info = "§3";
             light.success = "§a";
             light.error = "§c";
@@ -145,9 +197,51 @@ public class ConfigManager {
             themes = new LinkedHashMap<>();
             loadDefaultThemes();
         }
+
+        // Config'teki tema değişkenlerini geçerli temadan yükle
+        applyThemeToConfig();
+    }
+
+    public static void applyThemeToConfig() {
+        Theme theme = themes.get(config.currentTheme);
+        if (theme == null) theme = new Theme();
+        config.customPrefix = theme.prefix;
+        config.customInfo = theme.info;
+        config.customSuccess = theme.success;
+        config.customError = theme.error;
+        config.customOutput = theme.output;
+    }
+
+    public static void saveCurrentConfigAsTheme(String themeName) {
+        Theme theme = new Theme();
+        theme.prefix = config.customPrefix;
+        theme.info = resolveColor(config.customInfo);
+        theme.success = resolveColor(config.customSuccess);
+        theme.error = resolveColor(config.customError);
+        theme.output = resolveColor(config.customOutput);
+        themes.put(themeName, theme);
+        // Config'teki değerleri de kodlarla güncelleyelim
+        config.customInfo = theme.info;
+        config.customSuccess = theme.success;
+        config.customError = theme.error;
+        config.customOutput = theme.output;
+        saveThemes();
+    }
+
+    public static void loadThemeToConfig(String themeName) {
+        if (themes.containsKey(themeName)) {
+            config.currentTheme = themeName;
+            applyThemeToConfig();
+            saveAll();
+        }
     }
     
     public static void saveAll() {
+        // Kaydetmeden önce renkleri kodlara çevir
+        config.customInfo = resolveColor(config.customInfo);
+        config.customSuccess = resolveColor(config.customSuccess);
+        config.customError = resolveColor(config.customError);
+        config.customOutput = resolveColor(config.customOutput);
         saveJson(CONFIG_FILE, config);
         saveBlacklist();
         saveAliases();
@@ -314,8 +408,13 @@ public class ConfigManager {
     
     public static Map<String, Theme> getThemes() { return themes; }
     public static Theme getCurrentTheme() {
-        String themeName = config.currentTheme;
-        return themes.getOrDefault(themeName, themes.get("default"));
+        Theme theme = new Theme();
+        theme.prefix = config.customPrefix;
+        theme.info = resolveColor(config.customInfo);
+        theme.success = resolveColor(config.customSuccess);
+        theme.error = resolveColor(config.customError);
+        theme.output = resolveColor(config.customOutput);
+        return theme;
     }
     
     // --- JSON Helpers ---

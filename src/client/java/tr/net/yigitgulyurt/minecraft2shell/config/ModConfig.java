@@ -10,4 +10,10 @@ public class ModConfig {
     public boolean autoRegisterAliases = true;
     public boolean confirmCommand = true;
     public String currentTheme = "default";
+    // Mevcut temanın özelleştirilebilir alanları
+    public String customPrefix = "§f[m2s]";
+    public String customInfo = "§e";
+    public String customSuccess = "§a";
+    public String customError = "§c";
+    public String customOutput = "§7";
 }

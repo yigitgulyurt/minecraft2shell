@@ -25,6 +25,8 @@ import java.util.Map;
 public class ShellCommand {
     private static String pendingCommand = null;
     private static String pendingSaveFilename = null;
+    private static Integer pendingScheduleSeconds = null;
+    private static String pendingScheduleCommand = null;
     private static CommandDispatcher<FabricClientCommandSource> currentDispatcher = null;
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
@@ -337,32 +339,46 @@ public class ShellCommand {
 
     private static int confirmCommand(FabricClientCommandSource source) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
-        if (pendingCommand == null) {
+        if (pendingCommand != null) {
+            String cmd = pendingCommand;
+            String savePath = pendingSaveFilename;
+            pendingCommand = null;
+            pendingSaveFilename = null;
+            ModConfig cfg = ConfigManager.getConfig();
+            boolean oldConfirm = cfg.confirmCommand;
+            cfg.confirmCommand = false;
+            int result = runCommandInternal(source, cmd, savePath);
+            cfg.confirmCommand = oldConfirm;
+            return result;
+        } else if (pendingScheduleSeconds != null && pendingScheduleCommand != null) {
+            int seconds = pendingScheduleSeconds;
+            String command = pendingScheduleCommand;
+            pendingScheduleSeconds = null;
+            pendingScheduleCommand = null;
+            startSchedule(source, seconds, command);
+            return 1;
+        } else {
             source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.no_pending")));
             return 0;
         }
-        String cmd = pendingCommand;
-        String savePath = pendingSaveFilename;
-        pendingCommand = null;
-        pendingSaveFilename = null;
-        ModConfig cfg = ConfigManager.getConfig();
-        boolean oldConfirm = cfg.confirmCommand;
-        cfg.confirmCommand = false;
-        int result = runCommandInternal(source, cmd, savePath);
-        cfg.confirmCommand = oldConfirm;
-        return result;
     }
 
     private static int cancelCommand(FabricClientCommandSource source) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
-        if (pendingCommand == null) {
+        if (pendingCommand != null) {
+            pendingCommand = null;
+            pendingSaveFilename = null;
+            source.sendFeedback(Component.literal(theme.prefix + " " + theme.error + LanguageManager.get("command.confirm.cancelled")));
+            return 1;
+        } else if (pendingScheduleSeconds != null && pendingScheduleCommand != null) {
+            pendingScheduleSeconds = null;
+            pendingScheduleCommand = null;
+            source.sendFeedback(Component.literal(theme.prefix + " " + theme.error + LanguageManager.get("command.confirm.cancelled")));
+            return 1;
+        } else {
             source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.no_pending")));
             return 0;
         }
-        pendingCommand = null;
-        pendingSaveFilename = null;
-        source.sendFeedback(Component.literal(theme.prefix + " " + theme.error + LanguageManager.get("command.confirm.cancelled")));
-        return 1;
     }
 
     private static String getBetterErrorMessage(Exception e) {
@@ -555,19 +571,34 @@ public class ShellCommand {
 
     private static int scheduleCommand(FabricClientCommandSource source, int seconds, String command) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+        if (ConfigManager.getConfig().confirmCommand) {
+            pendingScheduleSeconds = seconds;
+            pendingScheduleCommand = command;
+            sendConfirmMessage(source, "Schedule: " + command + " (" + seconds + "s)");
+            return 1;
+        }
+        startSchedule(source, seconds, command);
+        return 1;
+    }
+
+    private static void startSchedule(FabricClientCommandSource source, int seconds, String command) {
+        ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
         source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + "Komut " + seconds + " saniye sonra çalıştırılacak: " + command));
 
         new Thread(() -> {
             try {
                 Thread.sleep(seconds * 1000L);
                 net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    // Schedule için onay zaten alındığı için tekrar onay istemiyoruz
+                    ModConfig cfg = ConfigManager.getConfig();
+                    boolean oldConfirm = cfg.confirmCommand;
+                    cfg.confirmCommand = false;
                     runCommand(source, command);
+                    cfg.confirmCommand = oldConfirm;
                 });
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         }).start();
-
-        return 1;
     }
 }

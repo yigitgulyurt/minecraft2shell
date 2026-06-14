@@ -12,6 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 public class ModConfigScreen {
+    
+    // Renk kodları açıklaması (yardım metni için)
+    private static final String COLOR_HELP_TEXT = "Use color name (e.g. red, black) or code (e.g. §c, §0).\n" +
+            "Available: §0§0 Black, §1§1 Dark Blue, §2§2 Dark Green, §3§3 Dark Aqua,\n" +
+            "§4§4 Dark Red, §5§5 Dark Purple, §6§6 Gold, §7§7 Gray,\n" +
+            "§8§8 Dark Gray, §9§9 Blue, §a§a Green, §b§b Aqua,\n" +
+            "§c§c Red, §d§d Light Purple, §e§e Yellow, §f§f White";
 
     public static Screen create(Screen parent) {
         // ConfigManager'ı ilk çalıştırmada başlat
@@ -21,7 +28,11 @@ public class ModConfigScreen {
 
         YetAnotherConfigLib.Builder builder = YetAnotherConfigLib.createBuilder()
                 .title(Component.literal("Minecraft2Shell"))
-                .save(ConfigManager::saveAll);
+                .save(() -> {
+                    // Renk isimlerini kodlarına çevir (ConfigManager kullan)
+                    ConfigManager.saveCurrentConfigAsTheme(cfg.currentTheme);
+                    ConfigManager.saveAll();
+                });
 
         // Genel Ayarlar Kategorisi
         builder.category(ConfigCategory.createBuilder()
@@ -85,19 +96,83 @@ public class ModConfigScreen {
         ConfigCategory.Builder themeCategory = ConfigCategory.createBuilder()
                 .name(Component.literal(LanguageManager.get("config.themes")));
         
-        // Geçerli bir tema olduğundan emin ol
         Map<String, ConfigManager.Theme> themesMap = ConfigManager.getThemes();
         if (!themesMap.containsKey(cfg.currentTheme)) {
             cfg.currentTheme = "default";
         }
         
-        // Tema Seçimi - Basit metin girişi (dropdown sorunlarını önlemek için)
+        // Mevcut temayı yükle (eğer değiştiyse)
+        if (!themesMap.get(cfg.currentTheme).prefix.equals(cfg.customPrefix)) {
+            ConfigManager.applyThemeToConfig();
+        }
+        
+        // Tema Seçimi (metin girişi - güvenilir)
+        String themeList = String.join(", ", themesMap.keySet());
         themeCategory.option(Option.<String>createBuilder()
                 .name(Component.literal(LanguageManager.get("config.select_theme")))
                 .description(OptionDescription.of(
-                        Component.literal(LanguageManager.get("config.select_theme.desc"))))
-                .binding("default", () -> cfg.currentTheme, v -> cfg.currentTheme = v)
+                        Component.literal(LanguageManager.get("config.select_theme.desc") + "\nAvailable: " + themeList)))
+                .binding("default", 
+                        () -> cfg.currentTheme, 
+                        v -> {
+                            if (!v.equals(cfg.currentTheme) && themesMap.containsKey(v)) {
+                                cfg.currentTheme = v;
+                                ConfigManager.applyThemeToConfig();
+                            }
+                        })
                 .controller(StringControllerBuilder::create)
+                .build());
+        
+        // Tema Kaydetme
+        themeCategory.option(Option.<String>createBuilder()
+                .name(Component.literal("Save Current Theme"))
+                .description(OptionDescription.of(
+                        Component.literal("Enter a name to save current theme settings")))
+                .binding("", 
+                        () -> "", 
+                        v -> {
+                            if (!v.isEmpty()) {
+                                ConfigManager.saveCurrentConfigAsTheme(v);
+                                cfg.currentTheme = v;
+                            }
+                        })
+                .controller(StringControllerBuilder::create)
+                .build());
+        
+        // Özelleştirilebilir Tema Alanları
+        themeCategory.group(OptionGroup.createBuilder()
+                .name(Component.literal("Customize Theme"))
+                .collapsed(false)
+                .option(Option.<String>createBuilder()
+                        .name(Component.literal("Prefix"))
+                        .description(OptionDescription.of(Component.literal("Chat prefix with color codes. " + COLOR_HELP_TEXT)))
+                        .binding("§f[m2s]", () -> cfg.customPrefix, v -> cfg.customPrefix = v)
+                        .controller(StringControllerBuilder::create)
+                        .build())
+                .option(Option.<String>createBuilder()
+                        .name(Component.literal("Info Color"))
+                        .description(OptionDescription.of(Component.literal("Color for info messages. " + COLOR_HELP_TEXT)))
+                        .binding("§e", () -> cfg.customInfo, v -> cfg.customInfo = v)
+                        .controller(StringControllerBuilder::create)
+                        .build())
+                .option(Option.<String>createBuilder()
+                        .name(Component.literal("Success Color"))
+                        .description(OptionDescription.of(Component.literal("Color for success messages. " + COLOR_HELP_TEXT)))
+                        .binding("§a", () -> cfg.customSuccess, v -> cfg.customSuccess = v)
+                        .controller(StringControllerBuilder::create)
+                        .build())
+                .option(Option.<String>createBuilder()
+                        .name(Component.literal("Error Color"))
+                        .description(OptionDescription.of(Component.literal("Color for error messages. " + COLOR_HELP_TEXT)))
+                        .binding("§c", () -> cfg.customError, v -> cfg.customError = v)
+                        .controller(StringControllerBuilder::create)
+                        .build())
+                .option(Option.<String>createBuilder()
+                        .name(Component.literal("Output Color"))
+                        .description(OptionDescription.of(Component.literal("Color for command output. " + COLOR_HELP_TEXT)))
+                        .binding("§7", () -> cfg.customOutput, v -> cfg.customOutput = v)
+                        .controller(StringControllerBuilder::create)
+                        .build())
                 .build());
 
         builder.category(themeCategory.build());
