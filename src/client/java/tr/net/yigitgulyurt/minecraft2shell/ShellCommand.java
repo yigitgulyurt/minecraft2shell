@@ -39,10 +39,6 @@ public class ShellCommand {
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("search")
                                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("query", StringArgumentType.greedyString())
                                         .executes(ctx -> showHistory(ctx.getSource(), StringArgumentType.getString(ctx, "query"))))))
-                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("confirm")
-                        .executes(ctx -> confirmCommand(ctx.getSource())))
-                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("cancel")
-                        .executes(ctx -> cancelCommand(ctx.getSource())))
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("alias")
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("list")
                                 .executes(ctx -> listAliases(ctx.getSource())))
@@ -73,7 +69,15 @@ public class ShellCommand {
                                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("command", StringArgumentType.greedyString())
                                         .executes(ctx -> saveCommandOutput(ctx.getSource(), StringArgumentType.getString(ctx, "filename"), StringArgumentType.getString(ctx, "command"))))))
                 .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("cmd", StringArgumentType.greedyString())
-                        .executes(ctx -> runCommand(ctx.getSource(), StringArgumentType.getString(ctx, "cmd"))));
+                        .executes(ctx -> {
+                            String cmd = StringArgumentType.getString(ctx, "cmd");
+                            if (cmd.equals("confirm")) {
+                                return confirmCommand(ctx.getSource());
+                            } else if (cmd.equals("cancel")) {
+                                return cancelCommand(ctx.getSource());
+                            }
+                            return runCommand(ctx.getSource(), cmd);
+                        }));
 
         dispatcher.register(m2sCommand);
     }
@@ -114,8 +118,7 @@ public class ShellCommand {
 
         if (ConfigManager.getConfig().confirmCommand) {
             pendingCommand = cmd;
-            source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.title") + cmd));
-            source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.instructions")));
+            sendConfirmMessage(source, cmd);
             return 1;
         }
 
@@ -192,6 +195,27 @@ public class ShellCommand {
         return 1;
     }
 
+    private static void sendConfirmMessage(FabricClientCommandSource source, String cmd) {
+        ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+        
+        Component title = Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.title") + cmd);
+        
+        Component confirmButton = Component.literal("[Confirm]")
+                .setStyle(net.minecraft.network.chat.Style.EMPTY
+                        .withColor(net.minecraft.ChatFormatting.GREEN)
+                        .withClickEvent(new net.minecraft.network.chat.ClickEvent.RunCommand("/m2s confirm"))
+                        .withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal("Click to confirm"))));
+        
+        Component cancelButton = Component.literal("[Cancel]")
+                .setStyle(net.minecraft.network.chat.Style.EMPTY
+                        .withColor(net.minecraft.ChatFormatting.RED)
+                        .withClickEvent(new net.minecraft.network.chat.ClickEvent.RunCommand("/m2s cancel"))
+                        .withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal("Click to cancel"))));
+        
+        source.sendFeedback(title);
+        source.sendFeedback(Component.literal(theme.prefix + " ").append(confirmButton).append(" ").append(cancelButton));
+    }
+
     private static int runCommandInternal(FabricClientCommandSource source, String cmd, String savePath) {
         ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
 
@@ -202,8 +226,7 @@ public class ShellCommand {
 
         if (ConfigManager.getConfig().confirmCommand) {
             pendingCommand = cmd;
-            source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.title") + cmd));
-            source.sendFeedback(Component.literal(theme.prefix + " " + theme.info + LanguageManager.get("command.confirm.instructions")));
+            sendConfirmMessage(source, cmd);
             return 1;
         }
 
