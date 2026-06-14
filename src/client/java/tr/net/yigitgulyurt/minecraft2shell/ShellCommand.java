@@ -240,7 +240,7 @@ public class ShellCommand {
             return 0;
         }
         String cmd = aliases.get(name);
-        source.sendFeedback(Component.literal(LanguageManager.get("command.history.executing") + cmd));
+        source.sendFeedback(Component.literal(LanguageManager.get("command.alias.ran") + cmd));
         return runCommand(source, cmd);
     }
 

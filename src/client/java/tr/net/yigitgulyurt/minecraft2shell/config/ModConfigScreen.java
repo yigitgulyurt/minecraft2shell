@@ -21,7 +21,7 @@ public class ModConfigScreen {
                         .option(Option.<Boolean>createBuilder()
                                 .name(Component.literal(LanguageManager.get("config.show_output")))
                                 .description(OptionDescription.of(
-                                        Component.literal(LanguageManager.get("config.show_output_desc"))))
+                                        Component.literal(LanguageManager.get("config.show_output.desc"))))
                                 .binding(true, () -> cfg.showOutput, v -> cfg.showOutput = v)
                                 .controller(TickBoxControllerBuilder::create)
                                 .build())
@@ -29,7 +29,7 @@ public class ModConfigScreen {
                         .option(Option.<Integer>createBuilder()
                                 .name(Component.literal(LanguageManager.get("config.history_limit")))
                                 .description(OptionDescription.of(
-                                        Component.literal(LanguageManager.get("config.history_limit_desc"))))
+                                        Component.literal(LanguageManager.get("config.history_limit.desc"))))
                                 .binding(50, () -> cfg.historyLimit, v -> cfg.historyLimit = v)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt)
                                         .range(1, 200)
@@ -39,7 +39,7 @@ public class ModConfigScreen {
                         .option(Option.<Integer>createBuilder()
                                 .name(Component.literal(LanguageManager.get("config.output_limit")))
                                 .description(OptionDescription.of(
-                                        Component.literal(LanguageManager.get("config.output_limit_desc"))))
+                                        Component.literal(LanguageManager.get("config.output_limit.desc"))))
                                 .binding(20, () -> cfg.outputLineLimit, v -> cfg.outputLineLimit = v)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt)
                                         .range(1, 1000)
@@ -49,7 +49,7 @@ public class ModConfigScreen {
                         .option(Option.<Boolean>createBuilder()
                                 .name(Component.literal(LanguageManager.get("config.output_reverse")))
                                 .description(OptionDescription.of(
-                                        Component.literal(LanguageManager.get("config.output_reverse_desc"))))
+                                        Component.literal(LanguageManager.get("config.output_reverse.desc"))))
                                 .binding(false, () -> cfg.outputReverse, v -> cfg.outputReverse = v)
                                 .controller(TickBoxControllerBuilder::create)
                                 .build())
@@ -57,7 +57,7 @@ public class ModConfigScreen {
                         .option(Option.<Boolean>createBuilder()
                                 .name(Component.literal(LanguageManager.get("config.auto_register_aliases")))
                                 .description(OptionDescription.of(
-                                        Component.literal(LanguageManager.get("config.auto_register_aliases_desc"))))
+                                        Component.literal(LanguageManager.get("config.auto_register_aliases.desc"))))
                                 .binding(true, () -> cfg.autoRegisterAliases, v -> cfg.autoRegisterAliases = v)
                                 .controller(TickBoxControllerBuilder::create)
                                 .build())

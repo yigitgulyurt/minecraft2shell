@@ -69,6 +69,11 @@ MIT Lisansı
 
 Minecraft2Shell is a powerful client-side Fabric mod that allows you to run operating system commands directly from within Minecraft!
 
+##TW
+I used AI for making this mod, it's mostly made by AI.
+But i used my brain too🧠. 
+:)
+
 ## ✨ Key Features
 
 | Feature | Description |
