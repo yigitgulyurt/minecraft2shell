@@ -16,4 +16,8 @@ public class ModConfig {
     public String customSuccess = "§a";
     public String customError = "§c";
     public String customOutput = "§7";
+    // Mevcut çalışma dizini
+    public String workingDirectory = null;
+    // Windows'ta hangi shell kullanılacak? (cmd veya powershell)
+    public String windowsShell = "cmd";
 }

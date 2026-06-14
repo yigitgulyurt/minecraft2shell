@@ -28,6 +28,53 @@ public class ShellCommand {
     private static Integer pendingScheduleSeconds = null;
     private static String pendingScheduleCommand = null;
     private static CommandDispatcher<FabricClientCommandSource> currentDispatcher = null;
+    private static String currentWorkingDirectory = null;
+    
+    // İlk çalışma dizini al
+    private static String getInitialWorkingDirectory() {
+        if (currentWorkingDirectory == null) {
+            if (ConfigManager.getConfig().workingDirectory != null) {
+                currentWorkingDirectory = ConfigManager.getConfig().workingDirectory;
+            } else {
+                currentWorkingDirectory = System.getProperty("user.dir");
+            }
+        }
+        return currentWorkingDirectory;
+    }
+    
+    // Çalışma dizinini kaydet
+    private static void setWorkingDirectory(String path, FabricClientCommandSource source) {
+        Path newDir = Path.of(path);
+        if (Files.isDirectory(newDir)) {
+            currentWorkingDirectory = newDir.toAbsolutePath().toString();
+            ConfigManager.getConfig().workingDirectory = currentWorkingDirectory;
+            ConfigManager.saveAll();
+            ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+            source.sendFeedback(Component.literal(theme.prefix + " " + theme.success + "Dizin değiştirildi: " + currentWorkingDirectory));
+        } else {
+            ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
+            source.sendError(Component.literal(theme.error + "Geçersiz dizin: " + path));
+        }
+    }
+    
+    // Komutu temizle ve cd komutunu işle
+    private static String[] parseCommand(String cmd) {
+        String trimmed = cmd.trim();
+        String lower = trimmed.toLowerCase();
+        
+        // cd komutu kontrolü
+        if (lower.startsWith("cd ")) {
+            String path = trimmed.substring(3).trim();
+            return new String[]{"cd", path};
+        } else if (lower.equals("cd")) {
+            // Sadece cd -> ev dizinine git (Windows: %USERPROFILE%, Linux/Mac: ~)
+            String homeDir = System.getProperty("user.home");
+            return new String[]{"cd", homeDir};
+        }
+        
+        // Normal komut
+        return new String[]{"exec", trimmed};
+    }
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
         currentDispatcher = dispatcher;
@@ -122,91 +169,8 @@ public class ShellCommand {
     }
 
     private static int saveCommandOutput(FabricClientCommandSource source, String filename, String cmd) {
-        ConfigManager.Theme theme = ConfigManager.getCurrentTheme();
-
-        if (ConfigManager.isBlacklisted(cmd)) {
-            source.sendError(Component.literal(theme.error + LanguageManager.get("command.blacklist.error") + cmd));
-            return 0;
-        }
-
-        if (ConfigManager.getConfig().confirmCommand) {
-            pendingCommand = cmd;
-            pendingSaveFilename = filename;
-            sendConfirmMessage(source, cmd);
-            return 1;
-        }
-
-        HistoryManager.add(cmd);
-
-        new Thread(() -> {
-            try {
-                Process process;
-                String os = System.getProperty("os.name").toLowerCase();
-                if (os.contains("win")) {
-                    process = new ProcessBuilder("cmd.exe", "/c", cmd).redirectErrorStream(true).start();
-                } else {
-                    process = new ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start();
-                }
-
-                List<String> allLines = new ArrayList<>();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), os.contains("win") ? "CP857" : "UTF-8"));
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    allLines.add(line);
-                }
-
-                Path outputPath = ConfigManager.getOutputPath(filename);
-                try (BufferedWriter writer = Files.newBufferedWriter(outputPath)) {
-                    for (String l : allLines) {
-                        writer.write(l);
-                        writer.newLine();
-                    }
-                }
-
-                ConfigManager.Theme finalTheme = ConfigManager.getCurrentTheme();
-                net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                    source.sendFeedback(Component.literal(finalTheme.prefix + " " + finalTheme.success + "Output saved to: " + outputPath.toAbsolutePath()));
-                });
-
-                int exitCode = process.waitFor();
-
-                if (ConfigManager.getConfig().showOutput) {
-                    ModConfig cfg = ConfigManager.getConfig();
-                    ConfigManager.Theme finalTheme1 = ConfigManager.getCurrentTheme();
-                    int limit = cfg.outputLineLimit;
-                    List<String> linesToShow;
-                    if (allLines.size() <= limit) {
-                        linesToShow = allLines;
-                    } else {
-                        int remaining;
-                        if (cfg.outputReverse) {
-                            linesToShow = allLines.subList(allLines.size() - limit, allLines.size());
-                            remaining = allLines.size() - limit;
-                        } else {
-                            linesToShow = allLines.subList(0, limit);
-                            remaining = allLines.size() - limit;
-                        }
-                        final int finalRemaining = remaining;
-                        net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                            source.sendFeedback(Component.literal(finalTheme1.prefix + " " + finalTheme1.info + LanguageManager.get("command.output.remaining", finalRemaining, limit)));
-                        });
-                    }
-                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                        for (String outputLine : linesToShow) {
-                            source.sendFeedback(Component.literal(finalTheme1.output + outputLine));
-                        }
-                    });
-                }
-
-            } catch (Exception e) {
-                ConfigManager.Theme theme1 = ConfigManager.getCurrentTheme();
-                net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                    source.sendError(Component.literal(theme1.error + getBetterErrorMessage(e)));
-                });
-            }
-        }).start();
-
-        return 1;
+        // saveCommandOutput sadece runCommandInternal'ı çağırıyor, tüm mantık orada
+        return runCommandInternal(source, cmd, filename);
     }
 
     private static void sendConfirmMessage(FabricClientCommandSource source, String cmd) {
@@ -247,15 +211,38 @@ public class ShellCommand {
 
         HistoryManager.add(cmd);
 
+        String[] parsed = parseCommand(cmd);
+        
+        // cd komutu ise direkt işle
+        if (parsed[0].equals("cd")) {
+            setWorkingDirectory(parsed[1], source);
+            return 1;
+        }
+
+        // Normal komut çalıştır
         new Thread(() -> {
             try {
                 Process process;
                 String os = System.getProperty("os.name").toLowerCase();
+                String workDir = getInitialWorkingDirectory();
+                
+                ProcessBuilder pb;
                 if (os.contains("win")) {
-                    process = new ProcessBuilder("cmd.exe", "/c", cmd).redirectErrorStream(true).start();
+                    // Config'ten Windows shell seçimi al
+                    String shell = ConfigManager.getConfig().windowsShell;
+                    if (shell.equalsIgnoreCase("powershell")) {
+                        pb = new ProcessBuilder("powershell.exe", "-Command", parsed[1]);
+                    } else {
+                        // Varsayılan: cmd
+                        pb = new ProcessBuilder("cmd.exe", "/c", parsed[1]);
+                    }
                 } else {
-                    process = new ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start();
+                    pb = new ProcessBuilder("sh", "-c", parsed[1]);
                 }
+                
+                pb.directory(Path.of(workDir).toFile());
+                pb.redirectErrorStream(true);
+                process = pb.start();
 
                 List<String> allLines = new ArrayList<>();
                 if (ConfigManager.getConfig().showOutput || savePath != null) {

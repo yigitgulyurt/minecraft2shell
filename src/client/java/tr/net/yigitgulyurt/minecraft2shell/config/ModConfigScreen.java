@@ -89,6 +89,15 @@ public class ModConfigScreen {
                         .binding(true, () -> cfg.confirmCommand, v -> cfg.confirmCommand = v)
                         .controller(TickBoxControllerBuilder::create)
                         .build())
+                
+                // Windows Shell Seçimi
+                .option(Option.<String>createBuilder()
+                        .name(Component.literal("Windows Shell"))
+                        .description(OptionDescription.of(
+                                Component.literal("Choose which shell to use on Windows (cmd or powershell)")))
+                        .binding("cmd", () -> cfg.windowsShell, v -> cfg.windowsShell = v)
+                        .controller(StringControllerBuilder::create)
+                        .build())
 
                 .build());
 
