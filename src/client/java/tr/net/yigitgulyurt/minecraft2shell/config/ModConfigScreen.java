@@ -61,6 +61,22 @@ public class ModConfigScreen {
                                 .binding(true, () -> cfg.autoRegisterAliases, v -> cfg.autoRegisterAliases = v)
                                 .controller(TickBoxControllerBuilder::create)
                                 .build())
+                        
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.literal(LanguageManager.get("config.confirm_command")))
+                                .description(OptionDescription.of(
+                                        Component.literal(LanguageManager.get("config.confirm_command.desc"))))
+                                .binding(true, () -> cfg.confirmCommand, v -> cfg.confirmCommand = v)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
+                        
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.literal(LanguageManager.get("config.use_regex_blacklist")))
+                                .description(OptionDescription.of(
+                                        Component.literal(LanguageManager.get("config.use_regex_blacklist.desc"))))
+                                .binding(false, () -> cfg.useRegexInBlacklist, v -> cfg.useRegexInBlacklist = v)
+                                .controller(TickBoxControllerBuilder::create)
+                                .build())
 
                         .build())
                 .save(ModConfig::save)

@@ -18,19 +18,31 @@ import java.util.List;
 import java.util.Map;
 
 public class ShellCommand {
+    private static String pendingCommand = null;
 
     public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
 
         // /m2s <komut> - ONLY CLIENT-SIDE
         LiteralArgumentBuilder<FabricClientCommandSource> m2sCommand = LiteralArgumentBuilder.<FabricClientCommandSource>literal("m2s")
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("history")
-                        .executes(ctx -> showHistory(ctx.getSource()))
+                        .executes(ctx -> showHistory(ctx.getSource(), null))
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("clear")
                                 .executes(ctx -> clearHistory(ctx.getSource())))
                         .then(RequiredArgumentBuilder.<FabricClientCommandSource, Integer>argument("index", IntegerArgumentType.integer(1))
                                 .executes(ctx -> runFromHistory(
                                         ctx.getSource(),
-                                        IntegerArgumentType.getInteger(ctx, "index")))))
+                                        IntegerArgumentType.getInteger(ctx, "index"))))
+                        .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("search")
+                                .then(RequiredArgumentBuilder.<FabricClientCommandSource, String>argument("query", StringArgumentType.greedyString())
+                                        .executes(ctx -> showHistory(
+                                                ctx.getSource(),
+                                                StringArgumentType.getString(ctx, "query"))))))
+
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("confirm")
+                        .executes(ctx -> confirmCommand(ctx.getSource())))
+
+                .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("cancel")
+                        .executes(ctx -> cancelCommand(ctx.getSource())))
 
                 .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("alias")
                         .then(LiteralArgumentBuilder.<FabricClientCommandSource>literal("list")
@@ -97,13 +109,20 @@ public class ShellCommand {
         }
     }
 
-    // --- /shell <cmd> ---
+    // --- /m2s <cmd> ---
     public static int runCommand(FabricClientCommandSource source, String cmd) {
         ModConfig cfg = ModConfig.get();
 
         if (cfg.isBlacklisted(cmd)) {
             source.sendError(Component.literal(LanguageManager.get("command.blacklist.error") + cmd));
             return 0;
+        }
+        
+        if (cfg.confirmCommand) {
+            pendingCommand = cmd;
+            source.sendFeedback(Component.literal(LanguageManager.get("command.confirm.title") + cmd));
+            source.sendFeedback(Component.literal(LanguageManager.get("command.confirm.instructions")));
+            return 1;
         }
 
         HistoryManager.add(cmd);
@@ -180,27 +199,130 @@ public class ShellCommand {
 
         return 1;
     }
+    
+    // --- Confirmation ---
+    private static int confirmCommand(FabricClientCommandSource source) {
+        if (pendingCommand == null) {
+            source.sendFeedback(Component.literal(LanguageManager.get("command.confirm.no_pending")));
+            return 0;
+        }
+        String cmd = pendingCommand;
+        pendingCommand = null;
+        source.sendFeedback(Component.literal(LanguageManager.get("command.confirm.executing") + cmd));
+        return runCommandWithoutConfirm(source, cmd);
+    }
+    
+    private static int cancelCommand(FabricClientCommandSource source) {
+        if (pendingCommand == null) {
+            source.sendFeedback(Component.literal(LanguageManager.get("command.confirm.no_pending")));
+            return 0;
+        }
+        pendingCommand = null;
+        source.sendFeedback(Component.literal(LanguageManager.get("command.confirm.cancelled")));
+        return 1;
+    }
+    
+    // Helper method to run without confirmation
+    private static int runCommandWithoutConfirm(FabricClientCommandSource source, String cmd) {
+        HistoryManager.add(cmd);
 
-    private static int countRemainingLines(BufferedReader reader) {
-        int count = 0;
-        try {
-            while (reader.readLine() != null) count++;
-        } catch (Exception ignored) {}
-        return count;
+        new Thread(() -> {
+            try {
+                ModConfig cfg = ModConfig.get();
+                Process process;
+                String os = System.getProperty("os.name").toLowerCase();
+                if (os.contains("win")) {
+                    process = new ProcessBuilder("cmd.exe", "/c", cmd)
+                            .redirectErrorStream(true)
+                            .start();
+                } else {
+                    // Linux/Mac desteği
+                    process = new ProcessBuilder("sh", "-c", cmd)
+                            .redirectErrorStream(true)
+                            .start();
+                }
+
+                if (cfg.showOutput) {
+                    BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(process.getInputStream(), os.contains("win") ? "CP857" : "UTF-8"));
+
+                    List<String> allLines = new ArrayList<>();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        allLines.add(line);
+                    }
+
+                    int limit = cfg.outputLineLimit;
+                    List<String> linesToShow;
+                    if (allLines.size() <= limit) {
+                        linesToShow = allLines;
+                    } else {
+                        final int remaining;
+                        if (cfg.outputReverse) {
+                            // Sondan göster
+                            linesToShow = allLines.subList(allLines.size() - limit, allLines.size());
+                            remaining = allLines.size() - limit;
+                        } else {
+                            // Baştan göster
+                            linesToShow = allLines.subList(0, limit);
+                            remaining = allLines.size() - limit;
+                        }
+                        // Mesajları render thread'inde gönder
+                        net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                            source.sendFeedback(Component.literal(
+                                    LanguageManager.get("command.output.remaining", remaining, limit)));
+                        });
+                    }
+
+                    // Çıktı satırlarını render thread'inde gönder
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        for (String outputLine : linesToShow) {
+                            source.sendFeedback(Component.literal("§7" + outputLine));
+                        }
+                    });
+                }
+
+                int exitCode = process.waitFor();
+                if (cfg.showOutput) {
+                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                        source.sendFeedback(Component.literal(
+                                LanguageManager.get("command.output.success", exitCode)));
+                    });
+                }
+
+            } catch (Exception e) {
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    source.sendError(Component.literal(LanguageManager.get("command.error") + e.getMessage()));
+                });
+            }
+        }).start();
+
+        return 1;
     }
 
     // --- Gecmis ---
-    private static int showHistory(FabricClientCommandSource source) {
-        List<String> history = HistoryManager.getAll();
-        if (history.isEmpty()) {
-            source.sendFeedback(Component.literal(LanguageManager.get("command.history.empty")));
-            return 1;
+    private static int showHistory(FabricClientCommandSource source, String query) {
+        List<HistoryManager.HistoryEntry> history;
+        if (query != null) {
+            history = HistoryManager.search(query);
+            if (history.isEmpty()) {
+                source.sendFeedback(Component.literal(LanguageManager.get("command.history.no_results")));
+                return 1;
+            }
+            source.sendFeedback(Component.literal(LanguageManager.get("command.history.search", query)));
+        } else {
+            history = HistoryManager.getAll();
+            if (history.isEmpty()) {
+                source.sendFeedback(Component.literal(LanguageManager.get("command.history.empty")));
+                return 1;
+            }
+            source.sendFeedback(Component.literal(LanguageManager.get("command.history.title")));
         }
-        source.sendFeedback(Component.literal(LanguageManager.get("command.history.title")));
+        
         for (int i = 0; i < history.size(); i++) {
             final int idx = i + 1;
-            final String cmd = history.get(i);
-            source.sendFeedback(Component.literal("§7  " + idx + ". " + cmd));
+            final HistoryManager.HistoryEntry entry = history.get(i);
+            source.sendFeedback(Component.literal("§7  " + idx + ". [" + entry.getFormattedTimestamp() + "] " + entry.command));
         }
         return 1;
     }
@@ -212,12 +334,12 @@ public class ShellCommand {
     }
 
     private static int runFromHistory(FabricClientCommandSource source, int index) {
-        List<String> history = HistoryManager.getAll();
+        List<HistoryManager.HistoryEntry> history = HistoryManager.getAll();
         if (index < 1 || index > history.size()) {
             source.sendError(Component.literal(LanguageManager.get("command.history.invalid_index") + index));
             return 0;
         }
-        String cmd = history.get(index - 1);
+        String cmd = history.get(index - 1).command;
         source.sendFeedback(Component.literal(LanguageManager.get("command.history.executing") + cmd));
         return runCommand(source, cmd);
     }

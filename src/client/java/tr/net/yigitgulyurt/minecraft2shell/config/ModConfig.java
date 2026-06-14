@@ -25,6 +25,10 @@ public class ModConfig {
     public boolean autoRegisterAliases = true;
     public List<String> blacklist = new ArrayList<>();
     public Map<String, String> aliases = new LinkedHashMap<>();
+    
+    // Yeni eklenenler
+    public boolean confirmCommand = true;
+    public boolean useRegexInBlacklist = false; // false = wildcard, true = regex
 
     // --- Singleton ---
     public static ModConfig get() {
@@ -59,15 +63,59 @@ public class ModConfig {
         }
     }
 
-    // --- Kara liste kontrolü (prefix match) ---
+    // --- Kara liste kontrolü ---
     public boolean isBlacklisted(String command) {
         String cmd = command.trim().toLowerCase();
         for (String entry : blacklist) {
             String e = entry.trim().toLowerCase();
-            if (cmd.equals(e) || cmd.startsWith(e + " ")) {
-                return true;
+            if (e.isEmpty()) continue;
+            
+            if (useRegexInBlacklist) {
+                // Regex modu
+                try {
+                    if (cmd.matches(e)) {
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+            } else {
+                // Wildcard modu (simple: * = any chars, ? = any single char)
+                if (wildcardMatch(cmd, e)) {
+                    return true;
+                }
             }
         }
         return false;
+    }
+    
+    // Wildcard eşleştirme yardımcısı
+    private boolean wildcardMatch(String text, String pattern) {
+        int textIndex = 0;
+        int patternIndex = 0;
+        int starIndex = -1;
+        int matchIndex = 0;
+        
+        while (textIndex < text.length()) {
+            if (patternIndex < pattern.length() 
+                && (pattern.charAt(patternIndex) == text.charAt(textIndex) 
+                || pattern.charAt(patternIndex) == '?')) {
+                textIndex++;
+                patternIndex++;
+            } else if (patternIndex < pattern.length() 
+                && pattern.charAt(patternIndex) == '*') {
+                starIndex = patternIndex++;
+                matchIndex = textIndex;
+            } else if (starIndex != -1) {
+                patternIndex = starIndex + 1;
+                textIndex = ++matchIndex;
+            } else {
+                return false;
+            }
+        }
+        
+        while (patternIndex < pattern.length() && pattern.charAt(patternIndex) == '*') {
+            patternIndex++;
+        }
+        
+        return patternIndex == pattern.length();
     }
 }

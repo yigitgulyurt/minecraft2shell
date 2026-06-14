@@ -3,7 +3,25 @@ plugins {
 	id 'maven-publish'
 }
 
-version = project.mod_version
+// Load .env file
+def loadEnv() {
+	def envFile = file('.env')
+	if (envFile.exists()) {
+		def env = new Properties()
+		envFile.withInputStream { stream ->
+			env.load(stream)
+		}
+		env.each { key, value ->
+			if (!project.hasProperty(key)) {
+				project.ext[key] = value
+			}
+		}
+	}
+}
+
+loadEnv()
+
+version = project.hasProperty('MOD_VERSION') ? project.MOD_VERSION : project.mod_version
 group = project.maven_group
 
 repositories {
